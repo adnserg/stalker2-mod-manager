@@ -202,6 +202,32 @@
             <Setter Property="Foreground" Value="#FFFFFFFF"/>
             <Setter Property="Padding" Value="10,5"/>
         </Style>
+
+        <!-- ProgressBar Style -->
+        <Style TargetType="ProgressBar">
+            <Setter Property="Background" Value="#FF3E3E42"/>
+            <Setter Property="Foreground" Value="#FF4CAF50"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Border x:Name="PART_Track" 
+                                       Background="{TemplateBinding Background}" 
+                                       CornerRadius="4"/>
+                                <Border x:Name="PART_Indicator" 
+                                       Background="{TemplateBinding Foreground}" 
+                                       HorizontalAlignment="Left"
+                                       CornerRadius="4"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border BorderBrush="#FF007ACC" BorderThickness="2" CornerRadius="8">
@@ -324,9 +350,37 @@
             </GroupBox>
 
             <!-- Status -->
-            <StatusBar Grid.Row="4" Margin="0,10,0,0">
-                <TextBlock x:Name="StatusTextBlock" Text="Ready"/>
-            </StatusBar>
+            <Grid Grid.Row="4" Margin="0,10,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StatusBar Grid.Row="0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="StatusTextBlock" Text="Ready" VerticalAlignment="Center"/>
+                        <ProgressBar x:Name="ProgressBar" 
+                                    Grid.Column="1" 
+                                    Width="200" 
+                                    Height="20" 
+                                    Margin="10,0,0,0"
+                                    Minimum="0" 
+                                    Maximum="100" 
+                                    Value="0"
+                                    Visibility="Collapsed"/>
+                    </Grid>
+                </StatusBar>
+                <TextBlock x:Name="ProgressTextBlock" 
+                          Grid.Row="1" 
+                          Foreground="#FF888888" 
+                          FontSize="11" 
+                          Margin="0,5,0,0"
+                          Text="" 
+                          HorizontalAlignment="Left"/>
+            </Grid>
         </Grid>
     </Border>
 </Window>

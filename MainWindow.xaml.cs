@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 using Stalker2ModManager.Models;
@@ -190,7 +191,7 @@ namespace Stalker2ModManager
             }
         }
 
-        private void InstallMods_Click(object sender, RoutedEventArgs e)
+        private async void InstallMods_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(TargetPathTextBox.Text))
             {
@@ -209,15 +210,50 @@ namespace Stalker2ModManager
                 return;
             }
 
+            // Блокируем кнопку установки
+            var installButton = sender as System.Windows.Controls.Button;
+            if (installButton != null)
+            {
+                installButton.IsEnabled = false;
+                installButton.Content = "Installing...";
+            }
+
+            // Показываем прогресс-бар
+            ProgressBar.Visibility = Visibility.Visible;
+            ProgressBar.Value = 0;
+            ProgressTextBlock.Text = "";
+
             try
             {
-                _modManagerService.InstallMods(_mods.ToList(), TargetPathTextBox.Text);
+                var progress = new Progress<InstallProgress>(p =>
+                {
+                    ProgressBar.Value = p.Percentage;
+                    ProgressTextBlock.Text = p.CurrentMod;
+                    UpdateStatus($"Installing: {p.CurrentMod} ({p.Installed}/{p.Total})");
+                });
+
+                await _modManagerService.InstallModsAsync(_mods.ToList(), TargetPathTextBox.Text, progress);
+                
                 UpdateStatus($"Installed {_mods.Count(m => m.IsEnabled)} mods");
                 System.Windows.MessageBox.Show("Mods installed successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show($"Error installing mods: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                // Восстанавливаем кнопку
+                if (installButton != null)
+                {
+                    installButton.IsEnabled = true;
+                    installButton.Content = "Install Mods";
+                }
+
+                // Скрываем прогресс-бар
+                ProgressBar.Visibility = Visibility.Collapsed;
+                ProgressBar.Value = 0;
+                ProgressTextBlock.Text = "";
             }
         }
 

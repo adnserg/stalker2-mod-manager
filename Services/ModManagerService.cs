@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Stalker2ModManager.Models;
 
 namespace Stalker2ModManager.Services
@@ -46,74 +48,108 @@ namespace Stalker2ModManager.Services
 
         public void InstallMods(List<ModInfo> mods, string targetPath)
         {
-            // Создаем целевую папку если её нет
-            if (!Directory.Exists(targetPath))
-            {
-                Directory.CreateDirectory(targetPath);
-            }
+            InstallModsAsync(mods, targetPath, null).Wait();
+        }
 
-            // Удаляем всё из целевой папки
-            var existingDirs = Directory.GetDirectories(targetPath);
-            foreach (var dir in existingDirs)
+        public async Task InstallModsAsync(List<ModInfo> mods, string targetPath, IProgress<InstallProgress> progress)
+        {
+            await Task.Run(async () =>
             {
-                Directory.Delete(dir, true);
-            }
-
-            var existingFiles = Directory.GetFiles(targetPath);
-            foreach (var file in existingFiles)
-            {
-                // Пропускаем служебные файлы Vortex
-                var fileName = Path.GetFileName(file);
-                if (fileName.StartsWith("vortex.") || 
-                    fileName == "snapshot.json" || 
-                    fileName.StartsWith("snapshot_") ||
-                    fileName == "rename_folders.py" ||
-                    fileName == "update_snapshot.py" ||
-                    fileName == "update_deployment.py")
+                // Создаем целевую папку если её нет
+                if (!Directory.Exists(targetPath))
                 {
-                    continue;
+                    Directory.CreateDirectory(targetPath);
                 }
 
-                File.Delete(file);
-            }
-
-            // Копируем только включенные моды в правильном порядке
-            var enabledMods = mods.Where(m => m.IsEnabled).OrderBy(m => m.Order).ToList();
-
-            foreach (var mod in enabledMods)
-            {
-                var targetFolderName = mod.GetTargetFolderName();
-                var targetModPath = Path.Combine(targetPath, targetFolderName);
-
-                if (!Directory.Exists(targetModPath))
+                // Удаляем всё из целевой папки
+                var existingDirs = Directory.GetDirectories(targetPath);
+                foreach (var dir in existingDirs)
                 {
-                    Directory.CreateDirectory(targetModPath);
+                    await Task.Run(() => Directory.Delete(dir, true));
                 }
 
-                // Копируем все файлы из исходной папки мода
-                CopyDirectory(mod.SourcePath, targetModPath);
-            }
+                var existingFiles = Directory.GetFiles(targetPath);
+                foreach (var file in existingFiles)
+                {
+                    // Пропускаем служебные файлы Vortex
+                    var fileName = Path.GetFileName(file);
+                    if (fileName.StartsWith("vortex.") || 
+                        fileName == "snapshot.json" || 
+                        fileName.StartsWith("snapshot_") ||
+                        fileName == "rename_folders.py" ||
+                        fileName == "update_snapshot.py" ||
+                        fileName == "update_deployment.py")
+                    {
+                        continue;
+                    }
+
+                    await Task.Run(() => File.Delete(file));
+                }
+
+                // Копируем только включенные моды в правильном порядке
+                var enabledMods = mods.Where(m => m.IsEnabled).OrderBy(m => m.Order).ToList();
+                int total = enabledMods.Count;
+                int installed = 0;
+
+                foreach (var mod in enabledMods)
+                {
+                    var targetFolderName = mod.GetTargetFolderName();
+                    var targetModPath = Path.Combine(targetPath, targetFolderName);
+
+                    if (!Directory.Exists(targetModPath))
+                    {
+                        Directory.CreateDirectory(targetModPath);
+                    }
+
+                    // Обновляем прогресс
+                    installed++;
+                    var percentage = total > 0 ? (int)((double)installed / total * 100) : 0;
+                    progress?.Report(new InstallProgress
+                    {
+                        CurrentMod = mod.Name,
+                        Installed = installed,
+                        Total = total,
+                        Percentage = percentage
+                    });
+
+                    // Копируем все файлы из исходной папки мода
+                    await CopyDirectoryAsync(mod.SourcePath, targetModPath);
+                }
+            });
         }
 
         private void CopyDirectory(string sourceDir, string targetDir)
         {
-            Directory.CreateDirectory(targetDir);
+            CopyDirectoryAsync(sourceDir, targetDir).Wait();
+        }
 
-            // Копируем файлы
-            foreach (var file in Directory.GetFiles(sourceDir))
+        private async Task CopyDirectoryAsync(string sourceDir, string targetDir)
+        {
+            await Task.Run(async () =>
             {
-                var fileName = Path.GetFileName(file);
-                var targetFilePath = Path.Combine(targetDir, fileName);
-                File.Copy(file, targetFilePath, true);
-            }
+                Directory.CreateDirectory(targetDir);
 
-            // Рекурсивно копируем подпапки
-            foreach (var dir in Directory.GetDirectories(sourceDir))
-            {
-                var dirName = Path.GetFileName(dir);
-                var targetSubDir = Path.Combine(targetDir, dirName);
-                CopyDirectory(dir, targetSubDir);
-            }
+                // Копируем файлы
+                var files = Directory.GetFiles(sourceDir);
+                foreach (var file in files)
+                {
+                    await Task.Run(() =>
+                    {
+                        var fileName = Path.GetFileName(file);
+                        var targetFilePath = Path.Combine(targetDir, fileName);
+                        File.Copy(file, targetFilePath, true);
+                    });
+                }
+
+                // Рекурсивно копируем подпапки
+                var dirs = Directory.GetDirectories(sourceDir);
+                foreach (var dir in dirs)
+                {
+                    var dirName = Path.GetFileName(dir);
+                    var targetSubDir = Path.Combine(targetDir, dirName);
+                    await CopyDirectoryAsync(dir, targetSubDir);
+                }
+            });
         }
 
         public string GetDefaultTargetPath()
