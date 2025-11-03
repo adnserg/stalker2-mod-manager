@@ -562,60 +562,224 @@ namespace Stalker2ModManager
                     }
                 }
 
-                // Извлекаем порядок модов из snapshot
-                var modOrderMap = new Dictionary<string, int>();
-                int order = 0;
+                // Извлекаем порядок модов из файла
+                // Список для сохранения порядка первого вхождения каждой папки
+                var modOrderList = new List<string>();
+                var seenMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var file in files)
                 {
-                    if (string.IsNullOrEmpty(file) || !file.Contains("\\"))
+                    if (string.IsNullOrEmpty(file) || (!file.Contains("\\") && !file.Contains("/")))
                         continue;
 
-                    var parts = file.Split('\\');
+                    var separator = file.Contains("\\") ? '\\' : '/';
+                    var parts = file.Split(separator);
                     if (parts.Length > 0)
                     {
-                        var folderName = parts[0];
-                        // Проверяем формат AAA-ModName-...
-                        if (folderName.Length >= 4 && folderName[3] == '-' &&
-                            System.Char.IsLetter(folderName[0]) && 
-                            System.Char.IsLetter(folderName[1]) && 
-                            System.Char.IsLetter(folderName[2]))
+                        var folderName = parts[0].Trim();
+                        
+                        // Проверяем формат с префиксом типа AAA-, AAB-, AAH- и т.д.
+                        // Ищем первый дефис, после которого начинается название мода
+                        var firstDashIndex = folderName.IndexOf('-');
+                        if (firstDashIndex > 0 && firstDashIndex < folderName.Length - 1)
                         {
-                            // Извлекаем имя мода без префикса (AAA-)
-                            var modName = folderName.Substring(4);
-                            if (!modOrderMap.ContainsKey(modName))
+                            var prefix = folderName.Substring(0, firstDashIndex);
+                            
+                            // Проверяем, что префикс состоит только из букв (например, AAA, AAB, AAH)
+                            if (prefix.Length >= 2 && prefix.All(c => System.Char.IsLetter(c)))
                             {
-                                modOrderMap[modName] = order++;
+                                // Извлекаем имя мода без префикса (все после первого дефиса)
+                                var modName = folderName.Substring(firstDashIndex + 1);
+                                
+                                // Пропускаем пустые имена
+                                if (string.IsNullOrWhiteSpace(modName))
+                                    continue;
+                                
+                                // Используем HashSet для уникальности (без учета регистра)
+                                var modNameKey = modName.ToLowerInvariant();
+                                if (!seenMods.Contains(modNameKey))
+                                {
+                                    seenMods.Add(modNameKey);
+                                    modOrderList.Add(modName); // Сохраняем оригинальное имя с регистром
+                                    _logger.LogDebug($"Found mod in order [{modOrderList.Count - 1}]: '{modName}' (from '{folderName}')");
+                                }
                             }
                         }
                     }
                 }
 
-                // Создаем словарь для быстрого поиска текущих модов
-                var modsByName = _mods.ToDictionary(m => m.Name, m => m);
+                _logger.LogInfo($"Extracted {modOrderList.Count} unique mods from file");
+                
+                // Логируем первые несколько модов для проверки порядка
+                var firstMods = modOrderList.Take(Math.Min(10, modOrderList.Count));
+                _logger.LogDebug($"First mods in order: {string.Join(" -> ", firstMods)}");
 
-                // Обновляем порядок модов
-                int newOrder = 0;
-                foreach (var kvp in modOrderMap.OrderBy(x => x.Value))
+                // Создаем словарь для быстрого поиска текущих модов (ключ - имя в нижнем регистре)
+                var modsByLowerName = _mods.ToDictionary(
+                    m => m.Name.ToLowerInvariant(), 
+                    m => m,
+                    StringComparer.OrdinalIgnoreCase);
+
+                // Функция для извлечения базового названия мода (без версий и ID)
+                string GetBaseModName(string fullName)
                 {
-                    var modNameFromSnapshot = kvp.Key;
+                    // Убираем версии типа -1621-1-9-1760894384 или -1621-2-0-1761270207
+                    // Ищем паттерн: буквы-цифры-цифры-цифры-цифры
+                    var baseName = fullName;
                     
-                    // Ищем совпадение по частичному совпадению имен
-                    var matchingMod = modsByName.Keys.FirstOrDefault(name =>
-                        name.Contains(modNameFromSnapshot) || modNameFromSnapshot.Contains(name) ||
-                        name.EndsWith(modNameFromSnapshot) || modNameFromSnapshot.EndsWith(name));
+                    // Удаляем суффиксы типа "(v2.0)" или "-rev75"
+                    baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"\s*\(v?\d+[.\d]*\)\s*$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-rev\d+$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    
+                    // Удаляем ID версии в конце типа "-1621-1-9-1760894384"
+                    // Паттерн: -число-число-число-число (4 группы чисел с дефисами)
+                    baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-\d+-\d+-\d+-\d+$", "");
+                    // Также паттерн: -число-число-число (3 группы чисел с дефисами)
+                    baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-\d+-\d+-\d+$", "");
+                    
+                    return baseName.Trim();
+                }
 
-                    if (matchingMod != null && modsByName.TryGetValue(matchingMod, out var mod))
+                // Создаем словарь по базовым названиям для более точного сопоставления
+                var modsByBaseName = new Dictionary<string, List<ModInfo>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var mod in modsByLowerName.Values)
+                {
+                    var baseName = GetBaseModName(mod.Name).ToLowerInvariant();
+                    if (!modsByBaseName.ContainsKey(baseName))
                     {
-                        mod.Order = newOrder++;
-                        modsByName.Remove(matchingMod);
+                        modsByBaseName[baseName] = new List<ModInfo>();
+                    }
+                    modsByBaseName[baseName].Add(mod);
+                }
+
+                // Обновляем порядок модов согласно порядку из файла
+                int newOrder = 0;
+                var matchedMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var modNameFromFile in modOrderList)
+                {
+                    var modNameLower = modNameFromFile.ToLowerInvariant();
+                    var baseNameFromFile = GetBaseModName(modNameFromFile).ToLowerInvariant();
+                    
+                    ModInfo matchedMod = null;
+                    string matchType = "";
+                    
+                    // 1. Пробуем точное совпадение (без учета регистра)
+                    if (modsByLowerName.TryGetValue(modNameLower, out var exactMod))
+                    {
+                        if (!matchedMods.Contains(exactMod.Name))
+                        {
+                            matchedMod = exactMod;
+                            matchType = "exact";
+                        }
+                    }
+
+                    // 2. Если точного совпадения нет, пробуем по базовому названию
+                    if (matchedMod == null && modsByBaseName.TryGetValue(baseNameFromFile, out var modsWithSameBase))
+                    {
+                        // Берем первый не сопоставленный мод с таким базовым названием
+                        matchedMod = modsWithSameBase.FirstOrDefault(m => !matchedMods.Contains(m.Name));
+                        if (matchedMod != null)
+                        {
+                            matchType = "base name";
+                        }
+                    }
+
+                    // 3. Если всё еще не нашли, ищем частичное совпадение
+                    if (matchedMod == null)
+                    {
+                        ModInfo bestMatch = null;
+                        int bestMatchScore = 0;
+
+                        foreach (var mod in modsByLowerName.Values)
+                        {
+                            if (matchedMods.Contains(mod.Name))
+                                continue;
+
+                            var modNameLowerForMatch = mod.Name.ToLowerInvariant();
+                            var baseNameForMatch = GetBaseModName(mod.Name).ToLowerInvariant();
+                            int score = 0;
+
+                            // Проверяем совпадение базовых названий
+                            if (baseNameForMatch == baseNameFromFile && !string.IsNullOrEmpty(baseNameFromFile))
+                            {
+                                score = 900; // Совпадение базовых названий - очень высокий приоритет
+                            }
+                            // Проверяем разные типы совпадений с разными весами
+                            else if (modNameLowerForMatch == modNameLower)
+                            {
+                                score = 1000; // Точное совпадение (уже должно быть обработано выше, но на всякий случай)
+                            }
+                            else if (modNameLowerForMatch.StartsWith(modNameLower) || modNameLower.StartsWith(modNameLowerForMatch))
+                            {
+                                score = 500; // Начинается с
+                            }
+                            else if (modNameLowerForMatch.EndsWith(modNameLower) || modNameLower.EndsWith(modNameLowerForMatch))
+                            {
+                                score = 400; // Заканчивается на
+                            }
+                            else if (baseNameForMatch.Contains(baseNameFromFile) || baseNameFromFile.Contains(baseNameForMatch))
+                            {
+                                score = 450; // Базовое название содержит
+                            }
+                            else if (modNameLowerForMatch.Contains(modNameLower) || modNameLower.Contains(modNameLowerForMatch))
+                            {
+                                // Вычисляем длину совпадающей части
+                                var shorter = modNameLower.Length < modNameLowerForMatch.Length ? modNameLower : modNameLowerForMatch;
+                                var longer = modNameLower.Length >= modNameLowerForMatch.Length ? modNameLower : modNameLowerForMatch;
+                                
+                                // Ищем наибольшую общую подстроку
+                                int maxCommonLength = 0;
+                                for (int i = 0; i <= longer.Length - shorter.Length; i++)
+                                {
+                                    int commonLength = 0;
+                                    for (int j = 0; j < shorter.Length; j++)
+                                    {
+                                        if (longer[i + j] == shorter[j])
+                                            commonLength++;
+                                        else
+                                            break;
+                                    }
+                                    if (commonLength > maxCommonLength)
+                                        maxCommonLength = commonLength;
+                                }
+                                score = 300 + maxCommonLength; // Содержит, с бонусом за длину совпадения
+                            }
+
+                            if (score > bestMatchScore)
+                            {
+                                bestMatchScore = score;
+                                bestMatch = mod;
+                            }
+                        }
+
+                        if (bestMatch != null)
+                        {
+                            matchedMod = bestMatch;
+                            matchType = $"partial (score: {bestMatchScore})";
+                        }
+                    }
+
+                    if (matchedMod != null)
+                    {
+                        matchedMod.Order = newOrder++;
+                        matchedMods.Add(matchedMod.Name);
+                        _logger.LogDebug($"Matched ({matchType}): '{modNameFromFile}' -> '{matchedMod.Name}' (Order: {matchedMod.Order})");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Could not match mod from file: '{modNameFromFile}' (base: '{baseNameFromFile}')");
                     }
                 }
 
-                // Добавляем оставшиеся моды в конец
-                foreach (var mod in modsByName.Values)
+                // Добавляем оставшиеся (не сопоставленные) моды в конец
+                foreach (var mod in modsByLowerName.Values)
                 {
-                    mod.Order = newOrder++;
+                    if (!matchedMods.Contains(mod.Name))
+                    {
+                        mod.Order = newOrder++;
+                        _logger.LogDebug($"Added unmatched mod '{mod.Name}' at end (Order: {mod.Order})");
+                    }
                 }
 
                 // Сортируем список по порядку
@@ -630,10 +794,10 @@ namespace Stalker2ModManager
                 var fileName = System.IO.Path.GetFileName(jsonFilePath);
                 var fileType = System.IO.Path.GetExtension(jsonFilePath).ToLower() == ".txt" ? "TXT" : "JSON";
                 UpdateStatus($"Sorted {_mods.Count} mods according to {fileName} ({fileType})");
-                _logger.LogSuccess($"Sorted {_mods.Count} mods according to {fileName} ({fileType}). Found {modOrderMap.Count} mods in file");
+                _logger.LogSuccess($"Sorted {_mods.Count} mods according to {fileName} ({fileType}). Found {modOrderList.Count} mods in file");
 
                 System.Windows.MessageBox.Show(
-                    $"Mods sorted successfully according to {fileName}.\nFound {modOrderMap.Count} mods in file.",
+                    $"Mods sorted successfully according to {fileName}.\nFound {modOrderList.Count} mods in file.",
                     "Success",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
