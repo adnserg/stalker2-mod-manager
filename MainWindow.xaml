@@ -1,0 +1,84 @@
+<Window x:Class="Stalker2ModManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="S.T.A.L.K.E.R. 2 Mod Manager" Height="700" Width="1000">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Paths -->
+        <GroupBox Grid.Row="0" Header="Paths" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+
+                <Label Grid.Row="0" Grid.Column="0" Content="Vortex Path:" VerticalAlignment="Center" Margin="0,5"/>
+                <TextBox Grid.Row="0" Grid.Column="1" x:Name="VortexPathTextBox" Margin="5" VerticalContentAlignment="Center"/>
+                <Button Grid.Row="0" Grid.Column="2" Content="Browse..." Click="BrowseVortexPath_Click" Margin="5,0,0,0" Padding="10,0"/>
+
+                <Label Grid.Row="1" Grid.Column="0" Content="Target Path:" VerticalAlignment="Center" Margin="0,5"/>
+                <TextBox Grid.Row="1" Grid.Column="1" x:Name="TargetPathTextBox" Margin="5" VerticalContentAlignment="Center"/>
+                <Button Grid.Row="1" Grid.Column="2" Content="Browse..." Click="BrowseTargetPath_Click" Margin="5,0,0,0" Padding="10,0"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Actions -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="Load Mods" Click="LoadMods_Click" Padding="10,5" Margin="0,0,5,0"/>
+            <Button Content="Save Config" Click="SaveConfig_Click" Padding="10,5" Margin="0,0,5,0"/>
+            <Button Content="Load Config" Click="LoadConfig_Click" Padding="10,5" Margin="0,0,5,0"/>
+            <Button Content="Install Mods" Click="InstallMods_Click" Padding="10,5" Background="#FF4CAF50" Foreground="White" FontWeight="Bold"/>
+        </StackPanel>
+
+        <!-- Mods List -->
+        <GroupBox Grid.Row="2" Header="Mods">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <ListBox x:Name="ModsListBox" Grid.Column="0" SelectionMode="Single">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding IsEnabled}" Content="{Binding Name}" VerticalAlignment="Center">
+                                <CheckBox.Content>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Order, StringFormat='[{0}]'}" FontWeight="Bold" Margin="0,0,5,0"/>
+                                        <TextBlock Text="{Binding Name}"/>
+                                        <TextBlock Text="{Binding GetTargetFolderName(), StringFormat='→ {0}'}" Foreground="Gray" Margin="10,0,0,0" FontStyle="Italic"/>
+                                    </StackPanel>
+                                </CheckBox.Content>
+                            </CheckBox>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Column="1" Orientation="Vertical" Margin="10,0,0,0">
+                    <Button Content="↑ Move Up" Click="MoveUp_Click" Padding="10,5" Margin="0,0,0,5" Width="120"/>
+                    <Button Content="↓ Move Down" Click="MoveDown_Click" Padding="10,5" Margin="0,0,0,5" Width="120"/>
+                </StackPanel>
+            </Grid>
+        </GroupBox>
+
+        <!-- Status -->
+        <StatusBar Grid.Row="3" Margin="0,10,0,0">
+            <TextBlock x:Name="StatusTextBlock" Text="Ready"/>
+        </StatusBar>
+    </Grid>
+</Window>
+
