@@ -20,6 +20,7 @@ namespace Stalker2ModManager
         private readonly ModManagerService _modManagerService;
         private readonly ConfigService _configService;
         private readonly Services.Logger _logger;
+        private readonly Services.LocalizationService _localization;
         private ObservableCollection<ModInfo> _mods;
         private ModInfo _draggedMod;
         private Point _dragStartPoint;
@@ -33,11 +34,18 @@ namespace Stalker2ModManager
             _modManagerService = new ModManagerService();
             _configService = new ConfigService();
             _logger = Services.Logger.Instance;
+            _localization = Services.LocalizationService.Instance;
             _mods = new ObservableCollection<ModInfo>();
             ModsListBox.ItemsSource = _mods;
 
             _logger.LogInfo("Application started");
             LoadConfig();
+            
+            // Подписываемся на изменение языка
+            _localization.LanguageChanged += Localization_LanguageChanged;
+            
+            // Инициализируем локализацию
+            UpdateLocalization();
             
             // Подписываемся на изменение размера окна
             SizeChanged += MainWindow_SizeChanged;
@@ -1319,6 +1327,67 @@ namespace Stalker2ModManager
         {
             _logger.LogInfo("Application closing");
             Close();
+        }
+
+        private void LanguageButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Переключаем язык между EN и RU
+            _localization.CurrentLanguage = _localization.CurrentLanguage == "en" ? "ru" : "en";
+        }
+
+        private void Localization_LanguageChanged(object sender, EventArgs e)
+        {
+            UpdateLocalization();
+        }
+
+        private void UpdateLocalization()
+        {
+            try
+            {
+                // Обновляем заголовок окна
+                Title = _localization.GetString("WindowTitle");
+                TitleTextBlock.Text = _localization.GetString("WindowTitle");
+                
+                // Обновляем кнопку языка
+                LanguageButton.Content = _localization.CurrentLanguage.ToUpper();
+                
+                // Paths GroupBox
+                PathsGroupBox.Header = _localization.GetString("Paths");
+                
+                // Labels
+                VortexPathLabel.Content = _localization.GetString("VortexPath");
+                TargetPathLabel.Content = _localization.GetString("TargetPath");
+                
+                // Buttons
+                BrowseVortexButton.Content = _localization.GetString("Browse");
+                BrowseTargetButton.Content = _localization.GetString("Browse");
+                
+                // Action buttons
+                LoadModsButton.Content = _localization.GetString("LoadMods");
+                SaveConfigButton.Content = _localization.GetString("SaveConfig");
+                LoadConfigButton.Content = _localization.GetString("LoadConfig");
+                ExportOrderButton.Content = _localization.GetString("ExportOrder");
+                ImportOrderButton.Content = _localization.GetString("ImportOrder");
+                AdvancedButton.Content = _localization.GetString("Advanced");
+                InstallModsButton.Content = _localization.GetString("InstallMods");
+                
+                // Mods GroupBox
+                ModsGroupBox.Header = _localization.GetString("Mods");
+                
+                // Move buttons
+                MoveUpButton.Content = _localization.GetString("MoveUp");
+                MoveDownButton.Content = _localization.GetString("MoveDown");
+                
+                // Status
+                if (StatusTextBlock.Text == "Ready" || StatusTextBlock.Text == "Готов")
+                {
+                    StatusTextBlock.Text = _localization.GetString("Status");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating localization: {ex.Message}");
+            }
         }
 
         protected override void OnClosed(EventArgs e)

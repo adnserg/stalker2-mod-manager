@@ -285,13 +285,18 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="S.T.A.L.K.E.R. 2 Mod Manager" 
+                <TextBlock x:Name="TitleTextBlock" Text="S.T.A.L.K.E.R. 2 Mod Manager" 
                           FontSize="18" 
                           FontWeight="Bold"
                           Foreground="#FFFFFFFF"
                           VerticalAlignment="Center"/>
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,0">
+                    <Button x:Name="LanguageButton" Content="EN" Width="50" Height="30" Click="LanguageButton_Click" 
+                            Background="#FF2D2D30" Padding="0" ToolTip="Switch Language / Переключить язык"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button Content="─" Width="40" Height="30" Click="MinimizeWindow_Click" 
                             Background="#FF2D2D30" Padding="0"/>
                     <Button Content="✕" Width="40" Height="30" Click="CloseWindow_Click"
@@ -300,7 +305,7 @@
             </Grid>
 
             <!-- Paths -->
-            <GroupBox Grid.Row="1" Header="Paths">
+            <GroupBox Grid.Row="1" x:Name="PathsGroupBox" Header="Paths">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -312,32 +317,32 @@
                         <RowDefinition/>
                     </Grid.RowDefinitions>
 
-                    <Label Grid.Row="0" Grid.Column="0" Content="Vortex Path:" VerticalAlignment="Center" Margin="0,5"/>
+                    <Label Grid.Row="0" Grid.Column="0" x:Name="VortexPathLabel" Content="Vortex Path:" VerticalAlignment="Center" Margin="0,5"/>
                     <TextBox Grid.Row="0" Grid.Column="1" x:Name="VortexPathTextBox" VerticalContentAlignment="Center"/>
-                    <Button Grid.Row="0" Grid.Column="2" Content="Browse..." Click="BrowseVortexPath_Click" Margin="5,0,0,0" Padding="10,0"/>
+                    <Button Grid.Row="0" Grid.Column="2" x:Name="BrowseVortexButton" Content="Browse..." Click="BrowseVortexPath_Click" Margin="5,0,0,0" Padding="10,0"/>
 
-                    <Label Grid.Row="1" Grid.Column="0" Content="Target Path:" VerticalAlignment="Center" Margin="0,5"/>
+                    <Label Grid.Row="1" Grid.Column="0" x:Name="TargetPathLabel" Content="Target Path:" VerticalAlignment="Center" Margin="0,5"/>
                     <TextBox Grid.Row="1" Grid.Column="1" x:Name="TargetPathTextBox" VerticalContentAlignment="Center"/>
-                    <Button Grid.Row="1" Grid.Column="2" Content="Browse..." Click="BrowseTargetPath_Click" Margin="5,0,0,0" Padding="10,0"/>
+                    <Button Grid.Row="1" Grid.Column="2" x:Name="BrowseTargetButton" Content="Browse..." Click="BrowseTargetPath_Click" Margin="5,0,0,0" Padding="10,0"/>
                 </Grid>
             </GroupBox>
 
             <!-- Actions -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,10">
-                <Button Content="Load Mods" Click="LoadMods_Click" Margin="0,0,5,0"/>
-                <Button Content="Save Config" Click="SaveConfig_Click" Margin="0,0,5,0"/>
-                <Button Content="Load Config" Click="LoadConfig_Click" Margin="0,0,5,0"/>
+                <Button x:Name="LoadModsButton" Content="Load Mods" Click="LoadMods_Click" Margin="0,0,5,0"/>
+                <Button x:Name="SaveConfigButton" Content="Save Config" Click="SaveConfig_Click" Margin="0,0,5,0"/>
+                <Button x:Name="LoadConfigButton" Content="Load Config" Click="LoadConfig_Click" Margin="0,0,5,0"/>
                 <Separator Margin="5,0" Background="#FF464646"/>
-                <Button Content="Export Order" Click="ExportOrder_Click" Margin="5,0,5,0"/>
-                <Button Content="Import Order" Click="ImportOrder_Click" Margin="0,0,5,0"/>
+                <Button x:Name="ExportOrderButton" Content="Export Order" Click="ExportOrder_Click" Margin="5,0,5,0"/>
+                <Button x:Name="ImportOrderButton" Content="Import Order" Click="ImportOrder_Click" Margin="0,0,5,0"/>
                 <Separator Margin="5,0" Background="#FF464646"/>
-                <Button Content="Advanced" Click="Advanced_Click" Margin="0,0,5,0"/>
+                <Button x:Name="AdvancedButton" Content="Advanced" Click="Advanced_Click" Margin="0,0,5,0"/>
                 <Separator Margin="5,0" Background="#FF464646"/>
-                <Button Content="Install Mods" Click="InstallMods_Click" Style="{StaticResource InstallButtonStyle}"/>
+                <Button x:Name="InstallModsButton" Content="Install Mods" Click="InstallMods_Click" Style="{StaticResource InstallButtonStyle}"/>
             </StackPanel>
 
             <!-- Mods List -->
-            <GroupBox Grid.Row="3" Header="Mods" MinHeight="200">
+            <GroupBox Grid.Row="3" x:Name="ModsGroupBox" Header="Mods" MinHeight="200">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -387,8 +392,8 @@
                     </Grid>
 
                     <StackPanel Grid.Column="1" Orientation="Vertical" Margin="10,0,0,0">
-                        <Button Content="↑ Move Up" Click="MoveUp_Click" Margin="0,0,0,5" Width="120"/>
-                        <Button Content="↓ Move Down" Click="MoveDown_Click" Margin="0,0,0,5" Width="120"/>
+                        <Button x:Name="MoveUpButton" Content="↑ Move Up" Click="MoveUp_Click" Margin="0,0,0,5" Width="120"/>
+                        <Button x:Name="MoveDownButton" Content="↓ Move Down" Click="MoveDown_Click" Margin="0,0,0,5" Width="120"/>
                     </StackPanel>
                 </Grid>
             </GroupBox>
