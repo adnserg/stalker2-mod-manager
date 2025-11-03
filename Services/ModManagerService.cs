@@ -61,29 +61,80 @@ namespace Stalker2ModManager.Services
                     Directory.CreateDirectory(targetPath);
                 }
 
-                // Удаляем всё из целевой папки
+                // Удаляем ВСЁ из целевой папки перед установкой
+                progress?.Report(new InstallProgress
+                {
+                    CurrentMod = "Cleaning target folder...",
+                    Installed = 0,
+                    Total = 1,
+                    Percentage = 0
+                });
+
+                // Список служебных файлов Vortex, которые нужно сохранить
+                var vortexFilesToKeep = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "snapshot.json",
+                    "rename_folders.py",
+                    "update_snapshot.py",
+                    "update_deployment.py"
+                };
+
+                // Удаляем ВСЕ папки из целевой папки
                 var existingDirs = Directory.GetDirectories(targetPath);
                 foreach (var dir in existingDirs)
                 {
-                    await Task.Run(() => Directory.Delete(dir, true));
+                    var dirName = Path.GetFileName(dir);
+                    
+                    try
+                    {
+                        await Task.Run(() =>
+                        {
+                            // Сначала снимаем атрибуты только для чтения, если они есть
+                            var dirInfo = new DirectoryInfo(dir);
+                            RemoveReadOnlyAttributes(dirInfo);
+                            Directory.Delete(dir, true);
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to delete directory {dir}: {ex.Message}");
+                        throw new Exception($"Failed to delete directory: {dirName}. Error: {ex.Message}. Make sure the folder is not open in another program.", ex);
+                    }
                 }
 
+                // Удаляем ВСЕ файлы, кроме служебных Vortex
                 var existingFiles = Directory.GetFiles(targetPath);
                 foreach (var file in existingFiles)
                 {
-                    // Пропускаем служебные файлы Vortex
                     var fileName = Path.GetFileName(file);
-                    if (fileName.StartsWith("vortex.") || 
-                        fileName == "snapshot.json" || 
-                        fileName.StartsWith("snapshot_") ||
-                        fileName == "rename_folders.py" ||
-                        fileName == "update_snapshot.py" ||
-                        fileName == "update_deployment.py")
+                    
+                    // Пропускаем только служебные файлы Vortex
+                    bool isVortexFile = fileName.StartsWith("vortex.", StringComparison.OrdinalIgnoreCase) ||
+                                       fileName.StartsWith("snapshot_", StringComparison.OrdinalIgnoreCase) ||
+                                       vortexFilesToKeep.Contains(fileName);
+                    
+                    if (isVortexFile)
                     {
                         continue;
                     }
 
-                    await Task.Run(() => File.Delete(file));
+                    try
+                    {
+                        await Task.Run(() =>
+                        {
+                            var fileInfo = new FileInfo(file);
+                            if (fileInfo.Exists)
+                            {
+                                fileInfo.Attributes = FileAttributes.Normal;
+                                File.Delete(file);
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to delete file {file}: {ex.Message}");
+                        throw new Exception($"Failed to delete file: {fileName}. Error: {ex.Message}. Make sure the file is not open in another program.", ex);
+                    }
                 }
 
                 // Копируем только включенные моды в правильном порядке
@@ -150,6 +201,32 @@ namespace Stalker2ModManager.Services
                     await CopyDirectoryAsync(dir, targetSubDir);
                 }
             });
+        }
+
+        private void RemoveReadOnlyAttributes(DirectoryInfo directoryInfo)
+        {
+            try
+            {
+                if (!directoryInfo.Exists) return;
+
+                directoryInfo.Attributes &= ~FileAttributes.ReadOnly;
+
+                // Убираем атрибуты только для чтения у всех файлов в папке
+                foreach (var file in directoryInfo.GetFiles("*", SearchOption.AllDirectories))
+                {
+                    file.Attributes &= ~FileAttributes.ReadOnly;
+                }
+
+                // Рекурсивно для всех подпапок
+                foreach (var subDir in directoryInfo.GetDirectories("*", SearchOption.AllDirectories))
+                {
+                    subDir.Attributes &= ~FileAttributes.ReadOnly;
+                }
+            }
+            catch
+            {
+                // Игнорируем ошибки при изменении атрибутов
+            }
         }
 
         public string GetDefaultTargetPath()
