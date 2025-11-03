@@ -1,7 +1,4 @@
-## Languages
-
-- English (current)
-- [Русский / Russian](README_RU.md)
+🌐 Languages: [English(current)](README.md) | [Русский](README.ru.md)
 
 # S.T.A.L.K.E.R. 2 Mod Manager
 
