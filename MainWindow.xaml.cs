@@ -5,8 +5,11 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Forms;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Stalker2ModManager.Models;
 using Stalker2ModManager.Services;
 
@@ -21,6 +24,8 @@ namespace Stalker2ModManager
         private ModInfo _draggedMod;
         private Point _dragStartPoint;
         private System.Windows.Threading.DispatcherTimer _scrollTimer;
+        private System.Windows.Controls.ListBoxItem _draggedListItem;
+        private InsertionLineAdorner _insertionLineAdorner;
 
         public MainWindow()
         {
@@ -476,11 +481,11 @@ namespace Stalker2ModManager
 
             // Сортируем список по порядку
             var sortedMods = _mods.OrderBy(m => m.Order).ToList();
-            _mods.Clear();
+                _mods.Clear();
             foreach (var mod in sortedMods)
-            {
-                _mods.Add(mod);
-            }
+                {
+                    _mods.Add(mod);
+                }
 
             // Обновляем порядки после сортировки
             UpdateOrders();
@@ -951,6 +956,9 @@ namespace Stalker2ModManager
             {
                 _draggedMod = mod;
                 listBox.SelectedItem = mod;
+                
+                // Находим соответствующий ListBoxItem для визуальной обратной связи
+                _draggedListItem = listBox.ItemContainerGenerator.ContainerFromItem(mod) as System.Windows.Controls.ListBoxItem;
             }
         }
 
@@ -969,11 +977,41 @@ namespace Stalker2ModManager
                     var listBox = sender as System.Windows.Controls.ListBox;
                     if (listBox != null)
                     {
+                        // Применяем визуальный эффект к перетаскиваемому элементу
+                        ApplyDragVisualEffect();
+                        
+                        // Создаем индикатор вставки
+                        CreateInsertionIndicator();
+                        
+                        // Подписываемся на GiveFeedback для визуальной обратной связи
+                        listBox.GiveFeedback += ModsListBox_GiveFeedback;
+                        
                         var data = new System.Windows.DataObject(typeof(ModInfo), _draggedMod);
                         System.Windows.DragDrop.DoDragDrop(listBox, data, System.Windows.DragDropEffects.Move);
+                        
+                        listBox.GiveFeedback -= ModsListBox_GiveFeedback;
+                        
+                        // Удаляем индикатор вставки
+                        RemoveInsertionIndicator();
+                        
+                        // Восстанавливаем визуальный стиль после завершения drag
+                        RestoreDraggedItemVisual();
+                        
                         _draggedMod = null;
+                        _draggedListItem = null;
                         _scrollTimer.Stop(); // Останавливаем автоскролл после завершения drag
                     }
+                }
+            }
+            else
+            {
+                // Если кнопка мыши отпущена до начала drag, сбрасываем состояние
+                if (_draggedMod != null)
+                {
+                    RemoveInsertionIndicator();
+                    RestoreDraggedItemVisual();
+                    _draggedMod = null;
+                    _draggedListItem = null;
                 }
             }
         }
@@ -984,8 +1022,12 @@ namespace Stalker2ModManager
             {
                 e.Effects = System.Windows.DragDropEffects.Move;
                 
-                // Автоскролл при перетаскивании
                 var listBox = sender as System.Windows.Controls.ListBox;
+                
+                // Обновляем индикатор вставки
+                UpdateInsertionIndicator(listBox, e);
+                
+                // Автоскролл при перетаскивании
                 if (listBox != null)
                 {
                     var scrollViewer = GetScrollViewer(listBox);
@@ -1052,8 +1094,159 @@ namespace Stalker2ModManager
             e.Handled = true;
         }
 
+        private void ModsListBox_GiveFeedback(object sender, System.Windows.GiveFeedbackEventArgs e)
+        {
+            // Используем стандартный курсор Move для визуальной обратной связи
+            e.UseDefaultCursors = false;
+            System.Windows.Input.Mouse.SetCursor(System.Windows.Input.Cursors.SizeAll);
+            e.Handled = true;
+        }
+
+        private void ApplyDragVisualEffect()
+        {
+            // Находим ListBoxItem, если он еще не был найден
+            if (_draggedListItem == null && _draggedMod != null)
+            {
+                var listBox = ModsListBox;
+                _draggedListItem = listBox.ItemContainerGenerator.ContainerFromItem(_draggedMod) as System.Windows.Controls.ListBoxItem;
+                
+                // Если элемент еще не создан в визуальном дереве, пытаемся найти его через поиск
+                if (_draggedListItem == null)
+                {
+                    foreach (var item in listBox.Items)
+                    {
+                        if (item == _draggedMod)
+                        {
+                            var container = listBox.ItemContainerGenerator.ContainerFromItem(item) as System.Windows.Controls.ListBoxItem;
+                            if (container != null)
+                            {
+                                _draggedListItem = container;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (_draggedListItem != null)
+            {
+                _draggedListItem.Opacity = 0.5;
+                var scaleTransform = new System.Windows.Media.ScaleTransform(0.95, 0.95);
+                _draggedListItem.RenderTransform = scaleTransform;
+                _draggedListItem.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = System.Windows.Media.Colors.Blue,
+                    BlurRadius = 10,
+                    ShadowDepth = 0,
+                    Opacity = 0.8
+                };
+            }
+        }
+
+        private void CreateInsertionIndicator()
+        {
+            try
+            {
+                var adornerLayer = AdornerLayer.GetAdornerLayer(ModsListBox);
+                if (adornerLayer == null)
+                {
+                    _logger.LogWarning("AdornerLayer not found for ListBox, insertion indicator may not display");
+                    return;
+                }
+                
+                _insertionLineAdorner = new InsertionLineAdorner(ModsListBox);
+                adornerLayer.Add(_insertionLineAdorner);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error creating insertion indicator: {ex.Message}");
+            }
+        }
+        
+        private void RemoveInsertionIndicator()
+        {
+            if (_insertionLineAdorner != null)
+            {
+                try
+                {
+                    var adornerLayer = AdornerLayer.GetAdornerLayer(ModsListBox);
+                    if (adornerLayer != null)
+                    {
+                        adornerLayer.Remove(_insertionLineAdorner);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error removing insertion indicator: {ex.Message}");
+                }
+                finally
+                {
+                    _insertionLineAdorner = null;
+                }
+            }
+        }
+
+        private void UpdateInsertionIndicator(System.Windows.Controls.ListBox listBox, System.Windows.DragEventArgs e)
+        {
+            if (_insertionLineAdorner == null || listBox == null) return;
+            
+            try
+            {
+                var point = e.GetPosition(listBox);
+                var item = listBox.GetItemAt(point);
+                
+                if (item is ModInfo targetMod && targetMod != _draggedMod)
+                {
+                    // Находим ListBoxItem для целевого элемента
+                    var targetListItem = listBox.ItemContainerGenerator.ContainerFromItem(targetMod) as System.Windows.Controls.ListBoxItem;
+                    if (targetListItem != null)
+                    {
+                        // Определяем, вставляем ли мы выше или ниже элемента
+                        var itemPoint = e.GetPosition(targetListItem);
+                        var isAbove = itemPoint.Y < targetListItem.ActualHeight / 2;
+                        
+                        var insertionY = isAbove 
+                            ? targetListItem.TranslatePoint(new Point(0, 0), listBox).Y
+                            : targetListItem.TranslatePoint(new Point(0, targetListItem.ActualHeight), listBox).Y;
+                        
+                        _insertionLineAdorner.UpdatePosition(insertionY);
+                    }
+                }
+                else if (item == null)
+                {
+                    // Если не нашли элемент, проверяем, показывать ли внизу или вверху
+                    if (point.Y < listBox.ActualHeight && point.Y >= 0)
+                    {
+                        // Если мышь в списке, но не на элементе, проверяем ближайший элемент
+                        var nearestY = point.Y;
+                        _insertionLineAdorner.UpdatePosition(nearestY);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error updating insertion indicator: {ex.Message}");
+            }
+        }
+
+        private void RestoreDraggedItemVisual()
+        {
+            if (_draggedListItem != null)
+            {
+                _draggedListItem.Opacity = 1.0;
+                _draggedListItem.RenderTransform = null;
+                _draggedListItem.Effect = null;
+            }
+        }
+
         private void ModsListBox_Drop(object sender, System.Windows.DragEventArgs e)
         {
+            // Удаляем индикатор вставки
+            RemoveInsertionIndicator();
+            
+            // Восстанавливаем визуальный стиль перетаскиваемого элемента
+            RestoreDraggedItemVisual();
+            
             var listBox = sender as System.Windows.Controls.ListBox;
             if (listBox == null) return;
 
@@ -1090,6 +1283,7 @@ namespace Stalker2ModManager
             }
 
             _draggedMod = null;
+            _draggedListItem = null;
             _scrollTimer.Stop(); // Останавливаем автоскролл при завершении перетаскивания
             e.Handled = true;
         }
@@ -1294,6 +1488,65 @@ public static class ListBoxExtensions
             element = System.Windows.Media.VisualTreeHelper.GetParent(element);
         }
         return null;
+    }
+}
+
+// Adorner для отображения линии вставки при перетаскивании
+public class InsertionLineAdorner : Adorner
+{
+    private double _insertionY;
+    
+    public InsertionLineAdorner(UIElement adornedElement) 
+        : base(adornedElement)
+    {
+        IsHitTestVisible = false; // Adorner не должен перехватывать события мыши
+        _insertionY = 0;
+    }
+    
+    public void UpdatePosition(double y)
+    {
+        _insertionY = y;
+        InvalidateVisual();
+    }
+    
+    protected override Size MeasureOverride(Size constraint)
+    {
+        return AdornedElement.RenderSize;
+    }
+    
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        return finalSize;
+    }
+    
+    protected override void OnRender(DrawingContext drawingContext)
+    {
+        var listBox = AdornedElement as System.Windows.Controls.ListBox;
+        if (listBox == null) return;
+        
+        var width = listBox.ActualWidth;
+        
+        // Рисуем горизонтальную линию вставки
+        var lineY = Math.Max(0, Math.Min(_insertionY, listBox.ActualHeight));
+        
+        // Толстая синяя линия
+        var pen = new Pen(new SolidColorBrush(Color.FromArgb(255, 0, 122, 204)), 3);
+        drawingContext.DrawLine(pen, new Point(0, lineY), new Point(width, lineY));
+        
+        // Добавляем небольшой треугольник-индикатор слева
+        var triangleSize = 8.0;
+        var pathGeometry = new PathGeometry();
+        var figure = new PathFigure();
+        figure.StartPoint = new Point(0, lineY - triangleSize);
+        figure.Segments.Add(new LineSegment(new Point(triangleSize, lineY), true));
+        figure.Segments.Add(new LineSegment(new Point(0, lineY + triangleSize), true));
+        figure.IsClosed = true;
+        pathGeometry.Figures.Add(figure);
+        
+        drawingContext.DrawGeometry(
+            new SolidColorBrush(Color.FromArgb(255, 0, 122, 204)), 
+            null, 
+            pathGeometry);
     }
 }
 

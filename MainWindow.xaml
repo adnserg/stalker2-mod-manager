@@ -232,7 +232,8 @@
     </Window.Resources>
 
     <Border BorderBrush="#FF007ACC" BorderThickness="2" CornerRadius="8">
-        <Grid Margin="10">
+        <AdornerDecorator>
+            <Grid Margin="10">
             <!-- Resize Grips - видимые области для изменения размера -->
             <!-- Top -->
             <Border Name="ResizeTop" Height="6" VerticalAlignment="Top" Margin="2,0,2,0" 
@@ -344,7 +345,8 @@
                     </Grid.ColumnDefinitions>
 
                     <Grid Grid.Column="0">
-                        <ListBox x:Name="ModsListBox" SelectionMode="Single" 
+                        <AdornerDecorator>
+                            <ListBox x:Name="ModsListBox" SelectionMode="Single" 
                             PreviewMouseLeftButtonDown="ModsListBox_PreviewMouseLeftButtonDown"
                             MouseMove="ModsListBox_MouseMove"
                             Drop="ModsListBox_Drop"
@@ -381,6 +383,7 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+                        </AdornerDecorator>
                     </Grid>
 
                     <StackPanel Grid.Column="1" Orientation="Vertical" Margin="10,0,0,0">
@@ -424,5 +427,6 @@
                 </Grid>
             </Grid>
         </Grid>
+        </AdornerDecorator>
     </Border>
 </Window>
