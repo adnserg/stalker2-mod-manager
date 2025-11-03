@@ -10,14 +10,19 @@ namespace Stalker2ModManager.Services
 {
     public class ModManagerService
     {
+        private readonly Logger _logger = Logger.Instance;
+
         public List<ModInfo> LoadModsFromVortexPath(string vortexPath)
         {
             var mods = new List<ModInfo>();
 
             if (!Directory.Exists(vortexPath))
             {
+                _logger.LogWarning($"Vortex path does not exist: {vortexPath}");
                 return mods;
             }
+
+            _logger.LogInfo($"Loading mods from Vortex path: {vortexPath}");
 
             var directories = Directory.GetDirectories(vortexPath);
             int order = 0;
@@ -41,8 +46,10 @@ namespace Stalker2ModManager.Services
                 };
 
                 mods.Add(modInfo);
+                _logger.LogDebug($"Found mod: {dirInfo.Name}");
             }
 
+            _logger.LogInfo($"Total mods found: {mods.Count}");
             return mods.OrderBy(m => m.Name).ToList();
         }
 
@@ -59,7 +66,10 @@ namespace Stalker2ModManager.Services
                 if (!Directory.Exists(targetPath))
                 {
                     Directory.CreateDirectory(targetPath);
+                    _logger.LogInfo($"Created target directory: {targetPath}");
                 }
+
+                _logger.LogInfo($"Starting installation. Target: {targetPath}, Total mods: {mods.Count}, Enabled: {mods.Count(m => m.IsEnabled)}");
 
                 // Удаляем ВСЁ из целевой папки перед установкой
                 progress?.Report(new InstallProgress
@@ -69,6 +79,7 @@ namespace Stalker2ModManager.Services
                     Total = 1,
                     Percentage = 0
                 });
+                _logger.LogInfo("Cleaning target folder...");
 
                 // Список служебных файлов Vortex, которые нужно сохранить
                 var vortexFilesToKeep = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -97,6 +108,7 @@ namespace Stalker2ModManager.Services
                     }
                     catch (Exception ex)
                     {
+                        _logger.LogError($"Failed to delete directory: {dir}", ex);
                         System.Diagnostics.Debug.WriteLine($"Failed to delete directory {dir}: {ex.Message}");
                         throw new Exception($"Failed to delete directory: {dirName}. Error: {ex.Message}. Make sure the folder is not open in another program.", ex);
                     }
@@ -132,6 +144,7 @@ namespace Stalker2ModManager.Services
                     }
                     catch (Exception ex)
                     {
+                        _logger.LogError($"Failed to delete file: {file}", ex);
                         System.Diagnostics.Debug.WriteLine($"Failed to delete file {file}: {ex.Message}");
                         throw new Exception($"Failed to delete file: {fileName}. Error: {ex.Message}. Make sure the file is not open in another program.", ex);
                     }
@@ -141,6 +154,8 @@ namespace Stalker2ModManager.Services
                 var enabledMods = mods.Where(m => m.IsEnabled).OrderBy(m => m.Order).ToList();
                 int total = enabledMods.Count;
                 int installed = 0;
+
+                _logger.LogInfo($"Installing {total} enabled mods...");
 
                 foreach (var mod in enabledMods)
                 {
@@ -163,9 +178,15 @@ namespace Stalker2ModManager.Services
                         Percentage = percentage
                     });
 
+                    _logger.LogInfo($"Installing mod [{installed}/{total}]: {mod.Name} -> {targetFolderName}");
+
                     // Копируем все файлы из исходной папки мода
                     await CopyDirectoryAsync(mod.SourcePath, targetModPath);
+                    
+                    _logger.LogDebug($"Mod '{mod.Name}' copied successfully");
                 }
+
+                _logger.LogSuccess($"Installation completed. Installed {installed} mods");
             });
         }
 

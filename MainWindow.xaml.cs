@@ -14,6 +14,7 @@ namespace Stalker2ModManager
     {
         private readonly ModManagerService _modManagerService;
         private readonly ConfigService _configService;
+        private readonly Services.Logger _logger;
         private ObservableCollection<ModInfo> _mods;
         private ModInfo _draggedMod;
         private Point _dragStartPoint;
@@ -23,9 +24,11 @@ namespace Stalker2ModManager
             InitializeComponent();
             _modManagerService = new ModManagerService();
             _configService = new ConfigService();
+            _logger = Services.Logger.Instance;
             _mods = new ObservableCollection<ModInfo>();
             ModsListBox.ItemsSource = _mods;
 
+            _logger.LogInfo("Application started");
             LoadConfig();
         }
 
@@ -36,6 +39,7 @@ namespace Stalker2ModManager
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 VortexPathTextBox.Text = dialog.SelectedPath;
+                _logger.LogInfo($"Vortex path selected: {dialog.SelectedPath}");
             }
         }
 
@@ -46,6 +50,7 @@ namespace Stalker2ModManager
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 TargetPathTextBox.Text = dialog.SelectedPath;
+                _logger.LogInfo($"Target path selected: {dialog.SelectedPath}");
             }
         }
 
@@ -96,9 +101,11 @@ namespace Stalker2ModManager
 
                 UpdateOrders();
                 UpdateStatus($"Loaded {mods.Count} mods");
+                _logger.LogSuccess($"Loaded {mods.Count} mods from path: {VortexPathTextBox.Text}");
             }
             catch (Exception ex)
             {
+                _logger.LogError("Error loading mods", ex);
                 System.Windows.MessageBox.Show($"Error loading mods: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -114,16 +121,20 @@ namespace Stalker2ModManager
                     TargetPath = TargetPathTextBox.Text
                 };
                 _configService.SavePathsConfig(pathsConfig);
+                _logger.LogInfo("Paths config saved");
 
                 // Сохраняем порядок модов отдельно
                 var modsOrder = _configService.CreateModOrderFromMods(_mods.ToList());
                 _configService.SaveModsOrder(modsOrder);
+                _logger.LogInfo($"Mods order saved: {modsOrder.Mods.Count} mods");
 
                 UpdateStatus("Config saved");
                 System.Windows.MessageBox.Show("Config saved successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                _logger.LogSuccess("Config saved successfully");
             }
             catch (Exception ex)
             {
+                _logger.LogError("Error saving config", ex);
                 System.Windows.MessageBox.Show($"Error saving config: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -179,14 +190,17 @@ namespace Stalker2ModManager
                     // Применяем порядок к текущим модам
                     ApplyModsOrder(modsOrder);
                     UpdateStatus($"Loaded mods order with {modsOrder.Mods.Count} mods");
+                    _logger.LogSuccess($"Loaded mods order with {modsOrder.Mods.Count} mods");
                 }
                 else if (pathsConfig != null)
                 {
                     UpdateStatus("Loaded paths config");
+                    _logger.LogInfo("Loaded paths config");
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogError("Error loading config", ex);
                 System.Windows.MessageBox.Show($"Error loading config: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -232,13 +246,18 @@ namespace Stalker2ModManager
                     UpdateStatus($"Installing: {p.CurrentMod} ({p.Installed}/{p.Total})");
                 });
 
+                var enabledModsCount = _mods.Count(m => m.IsEnabled);
+                _logger.LogInfo($"Starting mods installation. Target: {TargetPathTextBox.Text}, Enabled mods: {enabledModsCount}");
+                
                 await _modManagerService.InstallModsAsync(_mods.ToList(), TargetPathTextBox.Text, progress);
                 
-                UpdateStatus($"Installed {_mods.Count(m => m.IsEnabled)} mods");
+                UpdateStatus($"Installed {enabledModsCount} mods");
+                _logger.LogSuccess($"Mods installed successfully. Installed {enabledModsCount} mods to {TargetPathTextBox.Text}");
                 System.Windows.MessageBox.Show("Mods installed successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
+                _logger.LogError("Error installing mods", ex);
                 System.Windows.MessageBox.Show($"Error installing mods: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
@@ -267,6 +286,7 @@ namespace Stalker2ModManager
                     _mods.Move(index, index - 1);
                     UpdateOrders();
                     ModsListBox.SelectedIndex = index - 1;
+                    _logger.LogDebug($"Moved mod '{selectedMod.Name}' up (from {index} to {index - 1})");
                 }
             }
         }
@@ -281,6 +301,7 @@ namespace Stalker2ModManager
                     _mods.Move(index, index + 1);
                     UpdateOrders();
                     ModsListBox.SelectedIndex = index + 1;
+                    _logger.LogDebug($"Moved mod '{selectedMod.Name}' down (from {index} to {index + 1})");
                 }
             }
         }
@@ -313,6 +334,7 @@ namespace Stalker2ModManager
             if (modsOrder.Mods.Any())
             {
                 ApplyModsOrder(modsOrder);
+                _logger.LogDebug($"Applied saved mods order on startup: {modsOrder.Mods.Count} mods");
             }
         }
 
@@ -366,11 +388,13 @@ namespace Stalker2ModManager
                     var modsOrder = _configService.CreateModOrderFromMods(_mods.ToList());
                     _configService.SaveModsOrderToFile(modsOrder, dialog.FileName);
                     UpdateStatus($"Mods order exported to {System.IO.Path.GetFileName(dialog.FileName)}");
+                    _logger.LogSuccess($"Mods order exported to {dialog.FileName}");
                     System.Windows.MessageBox.Show("Mods order exported successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogError("Error exporting order", ex);
                 System.Windows.MessageBox.Show($"Error exporting order: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -400,16 +424,19 @@ namespace Stalker2ModManager
                     {
                         ApplyModsOrder(modsOrder);
                         UpdateStatus($"Mods order imported from {System.IO.Path.GetFileName(dialog.FileName)}");
+                        _logger.LogSuccess($"Mods order imported from {dialog.FileName}. Applied order for {modsOrder.Mods.Count} mods");
                         System.Windows.MessageBox.Show($"Mods order imported successfully.\nApplied order for {modsOrder.Mods.Count} mods.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     else
                     {
+                        _logger.LogWarning("Imported file does not contain any mods order");
                         System.Windows.MessageBox.Show("The imported file does not contain any mods order.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogError("Error importing order", ex);
                 System.Windows.MessageBox.Show($"Error importing order: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -421,6 +448,7 @@ namespace Stalker2ModManager
 
         private void Advanced_Click(object sender, RoutedEventArgs e)
         {
+            _logger.LogDebug("Advanced options window opened");
             var optionsWindow = new AdditionalOptionsWindow
             {
                 Owner = this
@@ -430,6 +458,7 @@ namespace Stalker2ModManager
             {
                 if (optionsWindow.SortBySnapshot && !string.IsNullOrWhiteSpace(optionsWindow.JsonFilePath))
                 {
+                    _logger.LogInfo($"Sorting mods by JSON file: {optionsWindow.JsonFilePath}");
                     SortModsByJsonFile(optionsWindow.JsonFilePath);
                 }
             }
@@ -558,6 +587,7 @@ namespace Stalker2ModManager
                 UpdateOrders();
                 var fileName = System.IO.Path.GetFileName(jsonFilePath);
                 UpdateStatus($"Sorted {_mods.Count} mods according to {fileName}");
+                _logger.LogSuccess($"Sorted {_mods.Count} mods according to {fileName}. Found {modOrderMap.Count} mods in file");
 
                 System.Windows.MessageBox.Show(
                     $"Mods sorted successfully according to {fileName}.\nFound {modOrderMap.Count} mods in file.",
@@ -567,6 +597,7 @@ namespace Stalker2ModManager
             }
             catch (Exception ex)
             {
+                _logger.LogError("Error sorting mods by JSON file", ex);
                 System.Windows.MessageBox.Show($"Error sorting mods by JSON file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -664,6 +695,7 @@ namespace Stalker2ModManager
                     _mods.Insert(newIndex, draggedMod);
                     UpdateOrders();
                     ModsListBox.SelectedItem = draggedMod;
+                    _logger.LogDebug($"Moved mod '{draggedMod.Name}' via drag-drop (from {oldIndex} to {newIndex})");
                 }
             }
 
@@ -700,7 +732,14 @@ namespace Stalker2ModManager
 
         private void CloseWindow_Click(object sender, RoutedEventArgs e)
         {
+            _logger.LogInfo("Application closing");
             Close();
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _logger.LogInfo("Application closed");
+            base.OnClosed(e);
         }
 
         // Helper method to find parent control
