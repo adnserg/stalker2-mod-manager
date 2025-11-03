@@ -419,6 +419,158 @@ namespace Stalker2ModManager
             StatusTextBlock.Text = message;
         }
 
+        private void Advanced_Click(object sender, RoutedEventArgs e)
+        {
+            var optionsWindow = new AdditionalOptionsWindow
+            {
+                Owner = this
+            };
+
+            if (optionsWindow.ShowDialog() == true)
+            {
+                if (optionsWindow.SortBySnapshot && !string.IsNullOrWhiteSpace(optionsWindow.JsonFilePath))
+                {
+                    SortModsByJsonFile(optionsWindow.JsonFilePath);
+                }
+            }
+        }
+
+        private void SortModsByJsonFile(string jsonFilePath)
+        {
+            try
+            {
+                if (!System.IO.File.Exists(jsonFilePath))
+                {
+                    System.Windows.MessageBox.Show($"File not found: {jsonFilePath}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                if (!_mods.Any())
+                {
+                    System.Windows.MessageBox.Show("No mods loaded. Load mods first.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Читаем выбранный JSON файл
+                var snapshotJson = System.IO.File.ReadAllText(jsonFilePath);
+                List<string> files = null;
+
+                // Пробуем разные форматы snapshot.json
+                try
+                {
+                    // Формат 1: Простой массив строк
+                    files = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(snapshotJson);
+                }
+                catch
+                {
+                    try
+                    {
+                        // Формат 2: Объект с полем Files
+                        var snapshot = Newtonsoft.Json.JsonConvert.DeserializeObject<VortexSnapshot>(snapshotJson);
+                        files = snapshot?.Files;
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            // Формат 3: Объект с корневым Files
+                            var snapshotRoot = Newtonsoft.Json.JsonConvert.DeserializeObject<VortexSnapshotRoot>(snapshotJson);
+                            files = snapshotRoot?.Files;
+                        }
+                        catch
+                        {
+                            System.Windows.MessageBox.Show("JSON file has unsupported format.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+                    }
+                }
+
+                if (files == null || files.Count == 0)
+                {
+                    System.Windows.MessageBox.Show("JSON file is empty or invalid.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Извлекаем порядок модов из snapshot
+                var modOrderMap = new Dictionary<string, int>();
+                int order = 0;
+
+                foreach (var file in files)
+                {
+                    if (string.IsNullOrEmpty(file) || !file.Contains("\\"))
+                        continue;
+
+                    var parts = file.Split('\\');
+                    if (parts.Length > 0)
+                    {
+                        var folderName = parts[0];
+                        // Проверяем формат AAA-ModName-...
+                        if (folderName.Length >= 4 && folderName[3] == '-' &&
+                            System.Char.IsLetter(folderName[0]) && 
+                            System.Char.IsLetter(folderName[1]) && 
+                            System.Char.IsLetter(folderName[2]))
+                        {
+                            // Извлекаем имя мода без префикса (AAA-)
+                            var modName = folderName.Substring(4);
+                            if (!modOrderMap.ContainsKey(modName))
+                            {
+                                modOrderMap[modName] = order++;
+                            }
+                        }
+                    }
+                }
+
+                // Создаем словарь для быстрого поиска текущих модов
+                var modsByName = _mods.ToDictionary(m => m.Name, m => m);
+
+                // Обновляем порядок модов
+                int newOrder = 0;
+                foreach (var kvp in modOrderMap.OrderBy(x => x.Value))
+                {
+                    var modNameFromSnapshot = kvp.Key;
+                    
+                    // Ищем совпадение по частичному совпадению имен
+                    var matchingMod = modsByName.Keys.FirstOrDefault(name =>
+                        name.Contains(modNameFromSnapshot) || modNameFromSnapshot.Contains(name) ||
+                        name.EndsWith(modNameFromSnapshot) || modNameFromSnapshot.EndsWith(name));
+
+                    if (matchingMod != null && modsByName.TryGetValue(matchingMod, out var mod))
+                    {
+                        mod.Order = newOrder++;
+                        modsByName.Remove(matchingMod);
+                    }
+                }
+
+                // Добавляем оставшиеся моды в конец
+                foreach (var mod in modsByName.Values)
+                {
+                    mod.Order = newOrder++;
+                }
+
+                // Сортируем список по порядку
+                var sortedMods = _mods.OrderBy(m => m.Order).ToList();
+                _mods.Clear();
+                foreach (var mod in sortedMods)
+                {
+                    _mods.Add(mod);
+                }
+
+                UpdateOrders();
+                var fileName = System.IO.Path.GetFileName(jsonFilePath);
+                UpdateStatus($"Sorted {_mods.Count} mods according to {fileName}");
+
+                System.Windows.MessageBox.Show(
+                    $"Mods sorted successfully according to {fileName}.\nFound {modOrderMap.Count} mods in file.",
+                    "Success",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Error sorting mods by JSON file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         // Drag and Drop handlers
         private void ModsListBox_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
