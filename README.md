@@ -1,3 +1,8 @@
+## Languages
+
+- English (current)
+- [Русский / Russian](README_RU.md)
+
 # S.T.A.L.K.E.R. 2 Mod Manager
 
 A mod management application for S.T.A.L.K.E.R. 2: Heart of Chornobyl.

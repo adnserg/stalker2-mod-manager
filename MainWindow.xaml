@@ -350,7 +350,30 @@
                     </Grid.ColumnDefinitions>
 
                     <Grid Grid.Column="0">
-                        <AdornerDecorator>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Column Headers -->
+                        <Border Grid.Row="0" Margin="0,0,0,5" Background="#FF2D2D30" Padding="5,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1" x:Name="OrderHeader" Text="Order" 
+                                          Foreground="#FF888888" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" x:Name="NameHeader" Text="Mod Name" 
+                                          Foreground="#FF888888" FontSize="11" FontWeight="Bold" Margin="5,0,0,0"/>
+                                <TextBlock Grid.Column="3" x:Name="TargetFolderHeader" Text="Target Folder" 
+                                          Foreground="#FF888888" FontSize="11" FontWeight="Bold" Margin="5,0,0,0"/>
+                            </Grid>
+                        </Border>
+                        
+                        <AdornerDecorator Grid.Row="1">
                             <ListBox x:Name="ModsListBox" SelectionMode="Single" 
                             PreviewMouseLeftButtonDown="ModsListBox_PreviewMouseLeftButtonDown"
                             MouseMove="ModsListBox_MouseMove"
@@ -363,27 +386,29 @@
                             <DataTemplate>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="30"/>
+                                        <ColumnDefinition Width="50"/>
+                                        <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <CheckBox Grid.Column="0" 
                                             IsChecked="{Binding IsEnabled}" 
                                             Click="CheckBox_Click"/>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="5,0,0,0">
-                                        <TextBlock Text="{Binding Order, StringFormat='[{0}]'}" 
-                                                  FontWeight="Bold" 
-                                                  Foreground="#FF007ACC"
-                                                  Margin="0,0,8,0"
-                                                  Width="40"/>
-                                        <TextBlock Text="{Binding Name}" 
-                                                  Foreground="#FFFFFFFF"
-                                                  FontSize="12"/>
-                                        <TextBlock Text="{Binding GetTargetFolderName(), StringFormat='→ {0}'}" 
-                                                  Foreground="#FF888888" 
-                                                  Margin="10,0,0,0" 
-                                                  FontStyle="Italic"
-                                                  FontSize="11"/>
-                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding Order, StringFormat='[{0}]'}" 
+                                              FontWeight="Bold" 
+                                              Foreground="#FF007ACC"
+                                              HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Name}" 
+                                              Foreground="#FFFFFFFF"
+                                              FontSize="12"
+                                              Margin="5,0,0,0"
+                                              VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding GetTargetFolderName(), StringFormat='→ {0}'}" 
+                                              Foreground="#FF888888" 
+                                              Margin="5,0,0,0" 
+                                              FontStyle="Italic"
+                                              FontSize="11"
+                                              VerticalAlignment="Center"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

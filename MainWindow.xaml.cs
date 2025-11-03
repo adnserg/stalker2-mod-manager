@@ -1378,6 +1378,18 @@ namespace Stalker2ModManager
                 MoveUpButton.Content = _localization.GetString("MoveUp");
                 MoveDownButton.Content = _localization.GetString("MoveDown");
                 
+                // Column headers
+                var orderHeader = FindName("OrderHeader") as System.Windows.Controls.TextBlock;
+                var nameHeader = FindName("NameHeader") as System.Windows.Controls.TextBlock;
+                var targetFolderHeader = FindName("TargetFolderHeader") as System.Windows.Controls.TextBlock;
+                
+                if (orderHeader != null)
+                    orderHeader.Text = _localization.GetString("OrderHeader");
+                if (nameHeader != null)
+                    nameHeader.Text = _localization.GetString("NameHeader");
+                if (targetFolderHeader != null)
+                    targetFolderHeader.Text = _localization.GetString("TargetFolderHeader");
+                
                 // Status
                 if (StatusTextBlock.Text == "Ready" || StatusTextBlock.Text == "Готов")
                 {

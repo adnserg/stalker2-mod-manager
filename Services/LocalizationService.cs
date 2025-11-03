@@ -81,6 +81,9 @@ namespace Stalker2ModManager.Services
                 ["NoModsLoaded"] = "No mods loaded. Click 'Load Mods' to load mods from Vortex folder.",
                 ["MoveUp"] = "↑ Move Up",
                 ["MoveDown"] = "↓ Move Down",
+                ["OrderHeader"] = "Order",
+                ["NameHeader"] = "Mod Name",
+                ["TargetFolderHeader"] = "Target Folder",
                 
                 // Status messages
                 ["Status"] = "Ready",
@@ -152,6 +155,9 @@ namespace Stalker2ModManager.Services
                 ["NoModsLoaded"] = "Моды не загружены. Нажмите 'Загрузить моды' для загрузки модов из папки Vortex.",
                 ["MoveUp"] = "↑ Вверх",
                 ["MoveDown"] = "↓ Вниз",
+                ["OrderHeader"] = "Порядок",
+                ["NameHeader"] = "Название мода",
+                ["TargetFolderHeader"] = "Папка назначения",
                 
                 // Status messages
                 ["Status"] = "Готов",
