@@ -6,7 +6,7 @@
         mc:Ignorable="d"
         Title="S.T.A.L.K.E.R. 2 Mod Manager" Height="750" Width="1100"
         Background="#FF1E1E1E" WindowStyle="None" AllowsTransparency="True"
-        ResizeMode="CanResize" MinWidth="800" MinHeight="600">
+        ResizeMode="CanResize" MinWidth="800" MinHeight="600" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <!-- Button Style -->
         <Style TargetType="Button">
