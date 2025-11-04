@@ -47,7 +47,6 @@
             <Setter Property="Foreground" Value="#FFFFFFFF"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
             <Style.Resources>
                 <Style TargetType="Border">
                     <Setter Property="Background" Value="#FF2D2D30"/>
@@ -66,9 +65,11 @@
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#FF3E3E42"/>
+                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
                 </Trigger>
                 <Trigger Property="IsHighlighted" Value="True">
-                    <Setter Property="Background" Value="#FF007ACC"/>
+                    <Setter Property="Background" Value="#FF3E3E42"/>
+                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
                 </Trigger>
             </Style.Triggers>
             <Style.Resources>
@@ -90,12 +91,15 @@
         <!-- Style for MenuItem in submenu (darker background) -->
         <Style x:Key="SubmenuMenuItemStyle" TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
             <Setter Property="Background" Value="#FF2D2D30"/>
+            <Setter Property="Foreground" Value="#FFFFFFFF"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#FF3E3E42"/>
+                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
                 </Trigger>
                 <Trigger Property="IsHighlighted" Value="True">
-                    <Setter Property="Background" Value="#FF007ACC"/>
+                    <Setter Property="Background" Value="#FF3E3E42"/>
+                    <Setter Property="Foreground" Value="Black"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
