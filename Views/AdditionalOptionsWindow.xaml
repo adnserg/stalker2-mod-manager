@@ -106,6 +106,7 @@
 
             <!-- Buttons -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Run DLC Mod Loader" Click="RunDlcModLoader_Click" Margin="0,0,10,0" Padding="15,8"/>
                 <Button Content="Apply" Click="Apply_Click" Margin="0,0,5,0" Padding="15,8"/>
                 <Button Content="Cancel" Click="Cancel_Click" Padding="15,8"/>
             </StackPanel>

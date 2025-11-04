@@ -11,6 +11,8 @@
     <FileVersion>1.0.1.0</FileVersion>
     <ApplicationIcon>images\icon.ico</ApplicationIcon>
     <AssemblyName>Stalker2VortexHelper</AssemblyName>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,11 +20,19 @@
     <EmbeddedResource Remove="UpdateInstaller\**" />
     <None Remove="UpdateInstaller\**" />
     <Page Remove="UpdateInstaller\**" />
+    <Compile Remove="HerbatasDLCModLoader\**" />
+    <EmbeddedResource Remove="HerbatasDLCModLoader\**" />
+    <None Remove="HerbatasDLCModLoader\**" />
+    <Page Remove="HerbatasDLCModLoader\**" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="images\icon.ico" />
     <EmbeddedResource Include="Localization\localization.json" />
+    <Content Include="HerbatasDLCModLoader\bin\repak.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInSingleFile>true</IncludeInSingleFile>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

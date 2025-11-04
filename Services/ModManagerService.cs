@@ -62,14 +62,15 @@ namespace Stalker2ModManager.Services
         {
             await Task.Run(async () =>
             {
+                var modsFolderPath = EnsureModsFolder(targetPath);
                 // Создаем целевую папку если её нет
-                if (!Directory.Exists(targetPath))
+                if (!Directory.Exists(modsFolderPath))
                 {
-                    Directory.CreateDirectory(targetPath);
-                    _logger.LogInfo($"Created target directory: {targetPath}");
+                    Directory.CreateDirectory(modsFolderPath);
+                    _logger.LogInfo($"Created target directory: {modsFolderPath}");
                 }
 
-                _logger.LogInfo($"Starting installation. Target: {targetPath}, Total mods: {mods.Count}, Enabled: {mods.Count(m => m.IsEnabled)}");
+                _logger.LogInfo($"Starting installation. Target: {modsFolderPath}, Total mods: {mods.Count}, Enabled: {mods.Count(m => m.IsEnabled)}");
 
                 // Список служебных файлов Vortex, которые нужно сохранить
                 var vortexFilesToKeep = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -92,7 +93,7 @@ namespace Stalker2ModManager.Services
                 foreach (var mod in enabledMods)
                 {
                     var targetFolderName = mod.GetTargetFolderName();
-                    var targetModPath = Path.Combine(targetPath, targetFolderName);
+                    var targetModPath = Path.Combine(modsFolderPath, targetFolderName);
                     requiredDirectories.Add(targetModPath);
                     
                     // Собираем все файлы, которые должны быть скопированы из этого мода
@@ -108,7 +109,7 @@ namespace Stalker2ModManager.Services
                     Percentage = 0
                 });
                 
-                await CleanUnusedModsAsync(targetPath, requiredDirectories, vortexFilesToKeep);
+                await CleanUnusedModsAsync(modsFolderPath, requiredDirectories, vortexFilesToKeep);
 
                 _logger.LogInfo($"Installing {total} enabled mods (only changed files will be copied)...");
 
@@ -116,7 +117,7 @@ namespace Stalker2ModManager.Services
                 foreach (var mod in enabledMods)
                 {
                     var targetFolderName = mod.GetTargetFolderName();
-                    var targetModPath = Path.Combine(targetPath, targetFolderName);
+                    var targetModPath = Path.Combine(modsFolderPath, targetFolderName);
 
                     if (!Directory.Exists(targetModPath))
                     {
@@ -343,9 +344,10 @@ namespace Stalker2ModManager.Services
 
         public async Task ClearModsFolderAsync(string targetPath)
         {
-            if (string.IsNullOrWhiteSpace(targetPath) || !Directory.Exists(targetPath))
+            var modsFolderPath = EnsureModsFolder(targetPath);
+            if (string.IsNullOrWhiteSpace(modsFolderPath) || !Directory.Exists(modsFolderPath))
             {
-                _logger.LogWarning($"Cannot clear mods folder: path is empty or does not exist: {targetPath}");
+                _logger.LogWarning($"Cannot clear mods folder: path is empty or does not exist: {modsFolderPath}");
                 return;
             }
 
@@ -353,10 +355,10 @@ namespace Stalker2ModManager.Services
             {
                 try
                 {
-                    _logger.LogInfo($"Clearing mods folder: {targetPath}");
+                    _logger.LogInfo($"Clearing mods folder: {modsFolderPath}");
 
                     // Удаляем все папки
-                    var existingDirs = Directory.GetDirectories(targetPath);
+                    var existingDirs = Directory.GetDirectories(modsFolderPath);
                     foreach (var dir in existingDirs)
                     {
                         try
@@ -373,7 +375,7 @@ namespace Stalker2ModManager.Services
                     }
 
                     // Удаляем все файлы (кроме служебных Vortex)
-                    var existingFiles = Directory.GetFiles(targetPath);
+                    var existingFiles = Directory.GetFiles(modsFolderPath);
                     foreach (var file in existingFiles)
                     {
                         var fileName = Path.GetFileName(file);
@@ -403,14 +405,32 @@ namespace Stalker2ModManager.Services
                         }
                     }
 
-                    _logger.LogSuccess($"Mods folder cleared successfully: {targetPath}");
+                    _logger.LogSuccess($"Mods folder cleared successfully: {modsFolderPath}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"Error clearing mods folder: {targetPath}", ex);
+                    _logger.LogError($"Error clearing mods folder: {modsFolderPath}", ex);
                     throw;
                 }
             });
+        }
+
+        private static string EnsureModsFolder(string providedPath)
+        {
+            try
+            {
+                var full = Path.GetFullPath(providedPath);
+                var normalized = full.Replace('/', '\\');
+                if (normalized.EndsWith("\\Stalker2\\Content\\Paks\\~mods", StringComparison.OrdinalIgnoreCase))
+                {
+                    return normalized;
+                }
+                return Path.Combine(normalized, "Stalker2", "Content", "Paks", "~mods");
+            }
+            catch
+            {
+                return providedPath;
+            }
         }
 
         public string GetDefaultTargetPath()
@@ -418,9 +438,9 @@ namespace Stalker2ModManager.Services
             // Ищем установку S.T.A.L.K.E.R. 2 в стандартных местах Steam
             var steamPaths = new[]
             {
-                @"E:\SteamLibrary\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Content\Paks\~mods",
-                @"C:\Program Files (x86)\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Content\Paks\~mods",
-                @"D:\SteamLibrary\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl\Stalker2\Content\Paks\~mods"
+                @"E:\SteamLibrary\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl",
+                @"C:\Program Files (x86)\Steam\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl",
+                @"D:\SteamLibrary\steamapps\common\S.T.A.L.K.E.R. 2 Heart of Chornobyl"
             };
 
             foreach (var path in steamPaths)

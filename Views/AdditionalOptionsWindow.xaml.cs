@@ -77,6 +77,29 @@ namespace Stalker2ModManager.Views
                 DragMove();
             }
         }
+
+        private void RunDlcModLoader_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var configService = new ConfigService();
+                var runner = new HerbatasDLCModLoaderRunner();
+                var result = runner.RunUsingConfig(configService);
+
+                if (result.Success)
+                {
+                    WarningWindow.Show($"PAK created/copied to:\n{result.Message}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    WarningWindow.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                WarningWindow.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }
 
