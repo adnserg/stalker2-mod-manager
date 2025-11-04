@@ -119,6 +119,31 @@
             <Setter Property="Padding" Value="8,6"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
+        
+        <!-- ComboBox Style -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#FF3E3E42"/>
+            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#FF464646"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#FF2D2D30"/>
+            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+            <Setter Property="Padding" Value="5,4"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FF3E3E42"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#FF007ACC"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
         <!-- Label Style -->
         <Style TargetType="Label">
@@ -368,8 +393,11 @@
                           Foreground="#FFFFFFFF"
                           VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,0">
-                    <Button x:Name="LanguageButton" Content="EN" Width="50" Height="30" Click="LanguageButton_Click" 
-                            Background="#FF2D2D30" Padding="0" ToolTip="Switch Language / Переключить язык"/>
+                    <ComboBox x:Name="LanguageComboBox" Width="120" Height="30" 
+                              Background="#FF2D2D30" Foreground="#FFFFFFFF"
+                              SelectionChanged="LanguageComboBox_SelectionChanged"
+                              VerticalContentAlignment="Center"
+                              Padding="5,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Button Content="─" Width="40" Height="30" Click="MinimizeWindow_Click" 

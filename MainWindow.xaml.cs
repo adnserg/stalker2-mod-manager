@@ -53,6 +53,9 @@ namespace Stalker2ModManager
             // Подписываемся на изменение языка
             _localization.LanguageChanged += Localization_LanguageChanged;
             
+            // Инициализируем ComboBox языков
+            InitializeLanguageComboBox();
+            
             // Инициализируем локализацию
             UpdateLocalization();
             
@@ -1438,14 +1441,79 @@ namespace Stalker2ModManager
             Close();
         }
 
-        private void LanguageButton_Click(object sender, RoutedEventArgs e)
+        private void InitializeLanguageComboBox()
         {
-            // Переключаем язык между EN и RU
-            _localization.CurrentLanguage = _localization.CurrentLanguage == "en" ? "ru" : "en";
+            try
+            {
+                var availableLanguages = _localization.GetAvailableLanguages();
+                var languageNames = _localization.GetLanguageNames();
+                
+                LanguageComboBox.Items.Clear();
+                
+                foreach (var langCode in availableLanguages)
+                {
+                    var displayName = languageNames.ContainsKey(langCode) 
+                        ? $"{languageNames[langCode]} ({langCode.ToUpper()})" 
+                        : langCode.ToUpper();
+                    
+                    var item = new System.Windows.Controls.ComboBoxItem
+                    {
+                        Content = displayName,
+                        Tag = langCode
+                    };
+                    
+                    LanguageComboBox.Items.Add(item);
+                    
+                    // Устанавливаем выбранный язык
+                    if (langCode == _localization.CurrentLanguage)
+                    {
+                        LanguageComboBox.SelectedItem = item;
+                    }
+                }
+                
+                // Если ничего не выбрано, выбираем первый элемент
+                if (LanguageComboBox.SelectedItem == null && LanguageComboBox.Items.Count > 0)
+                {
+                    LanguageComboBox.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error initializing language combo box", ex);
+            }
+        }
+
+        private void LanguageComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            try
+            {
+                if (LanguageComboBox.SelectedItem is System.Windows.Controls.ComboBoxItem selectedItem)
+                {
+                    var langCode = selectedItem.Tag?.ToString();
+                    if (!string.IsNullOrEmpty(langCode) && langCode != _localization.CurrentLanguage)
+                    {
+                        _localization.CurrentLanguage = langCode;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error changing language", ex);
+            }
         }
 
         private void Localization_LanguageChanged(object sender, EventArgs e)
         {
+            // Обновляем выбранный язык в ComboBox
+            foreach (System.Windows.Controls.ComboBoxItem item in LanguageComboBox.Items)
+            {
+                if (item.Tag?.ToString() == _localization.CurrentLanguage)
+                {
+                    LanguageComboBox.SelectedItem = item;
+                    break;
+                }
+            }
+            
             UpdateLocalization();
         }
 
@@ -1484,9 +1552,6 @@ namespace Stalker2ModManager
                 // Обновляем заголовок окна
                 Title = _localization.GetString("WindowTitle");
                 TitleTextBlock.Text = _localization.GetString("WindowTitle");
-                
-                // Обновляем кнопку языка
-                LanguageButton.Content = _localization.CurrentLanguage.ToUpper();
                 
                 // Paths GroupBox
                 PathsGroupBox.Header = _localization.GetString("Paths");

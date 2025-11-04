@@ -46,11 +46,41 @@ namespace Stalker2ModManager.Services
         {
             _translations = new Dictionary<string, Dictionary<string, string>>();
 
-            // Загружаем переводы из встроенных ресурсов
-            LoadBuiltInTranslations();
+            // Загружаем переводы из JSON файла
+            LoadTranslationsFromFile();
 
             // Загружаем сохраненный язык из конфига
             LoadLanguagePreference();
+        }
+
+        private void LoadTranslationsFromFile()
+        {
+            try
+            {
+                var localizationFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "localization.json");
+                if (File.Exists(localizationFile))
+                {
+                    var json = File.ReadAllText(localizationFile);
+                    _translations = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(json);
+                    
+                    if (_translations == null || _translations.Count == 0)
+                    {
+                        // Fallback to built-in translations if file is empty or invalid
+                        LoadBuiltInTranslations();
+                    }
+                }
+                else
+                {
+                    // Fallback to built-in translations if file doesn't exist
+                    LoadBuiltInTranslations();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error and fallback to built-in translations
+                Logger.Instance.LogError("Error loading localization file", ex);
+                LoadBuiltInTranslations();
+            }
         }
 
         private void LoadBuiltInTranslations()
@@ -266,6 +296,24 @@ namespace Stalker2ModManager.Services
         {
             var format = GetString(key);
             return string.Format(format, args);
+        }
+
+        public List<string> GetAvailableLanguages()
+        {
+            if (_translations == null)
+                return new List<string> { "en" };
+            
+            return _translations.Keys.ToList();
+        }
+
+        public Dictionary<string, string> GetLanguageNames()
+        {
+            return new Dictionary<string, string>
+            {
+                { "en", "English" },
+                { "ru", "Русский" },
+                { "fr", "Français" }
+            };
         }
     }
 }
