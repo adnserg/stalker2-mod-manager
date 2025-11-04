@@ -1564,15 +1564,21 @@ namespace Stalker2ModManager
                 BrowseVortexButton.Content = _localization.GetString("Browse");
                 BrowseTargetButton.Content = _localization.GetString("Browse");
                 
+                // Main menu headers
+                FileMenuItem.Header = "_" + _localization.GetString("File");
+                OrderMenuItem.Header = "_" + _localization.GetString("Order");
+                ToolsMenuItem.Header = "_" + _localization.GetString("Tools");
+                InstallMenuItem.Header = "_" + _localization.GetString("Install");
+                
                 // Action menu items
-                LoadModsMenuItem.Header = _localization.GetString("LoadMods");
-                SaveConfigMenuItem.Header = _localization.GetString("SaveConfig");
-                LoadConfigMenuItem.Header = _localization.GetString("LoadConfig");
-                ExportOrderMenuItem.Header = _localization.GetString("ExportOrder");
-                ImportOrderMenuItem.Header = _localization.GetString("ImportOrder");
-                AdvancedMenuItem.Header = _localization.GetString("Advanced");
-                InstallModsMenuItem.Header = _localization.GetString("InstallMods");
-                ClearModsMenuItem.Header = _localization.GetString("ClearMods");
+                LoadModsMenuItem.Header = "_" + _localization.GetString("LoadMods");
+                SaveConfigMenuItem.Header = "_" + _localization.GetString("SaveConfig");
+                LoadConfigMenuItem.Header = "_" + _localization.GetString("LoadConfig");
+                ExportOrderMenuItem.Header = "_" + _localization.GetString("ExportOrder");
+                ImportOrderMenuItem.Header = "_" + _localization.GetString("ImportOrder");
+                AdvancedMenuItem.Header = "_" + _localization.GetString("Advanced");
+                InstallModsMenuItem.Header = "_" + _localization.GetString("InstallMods");
+                ClearModsMenuItem.Header = "_" + _localization.GetString("ClearMods");
                 
                 // Mods GroupBox
                 ModsGroupBox.Header = _localization.GetString("Mods");
