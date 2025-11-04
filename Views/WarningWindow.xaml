@@ -1,4 +1,4 @@
-<Window x:Class="Stalker2ModManager.WarningWindow"
+<Window x:Class="Stalker2ModManager.Views.WarningWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Warning" MinHeight="200" MinWidth="500" MaxWidth="800"

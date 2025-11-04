@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using Stalker2ModManager.Services;
 
-namespace Stalker2ModManager
+namespace Stalker2ModManager.Views
 {
     public partial class WarningWindow : Window
     {

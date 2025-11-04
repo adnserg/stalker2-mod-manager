@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <Content Include="images\icon.ico" />
-    <Content Include="localization.json">
+    <Content Include="Localization\localization.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

@@ -57,7 +57,15 @@ namespace Stalker2ModManager.Services
         {
             try
             {
-                var localizationFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "localization.json");
+                // Пробуем найти файл в папке Localization (новая структура)
+                var localizationFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", "localization.json");
+                
+                // Если файл не найден в папке Localization, пробуем в корне (обратная совместимость)
+                if (!File.Exists(localizationFile))
+                {
+                    localizationFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "localization.json");
+                }
+                
                 if (File.Exists(localizationFile))
                 {
                     var json = File.ReadAllText(localizationFile);

@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Forms;
 
-namespace Stalker2ModManager
+namespace Stalker2ModManager.Views
 {
     public partial class AdditionalOptionsWindow : Window
     {

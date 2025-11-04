@@ -14,7 +14,7 @@ using System.Windows.Media;
 using Stalker2ModManager.Models;
 using Stalker2ModManager.Services;
 
-namespace Stalker2ModManager
+namespace Stalker2ModManager.Views
 {
     public partial class MainWindow : Window
     {
