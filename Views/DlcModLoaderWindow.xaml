@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Herbata's Mod as DLC Loader" Height="250" Width="500"
         Background="#FF1E1E1E" WindowStyle="None" AllowsTransparency="True"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
     <Window.Resources>
         <!-- Hover color to match main window -->
         <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#FF5A5A5A"/>
