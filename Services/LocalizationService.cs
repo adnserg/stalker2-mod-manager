@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Newtonsoft.Json;
 
 namespace Stalker2ModManager.Services
@@ -57,37 +58,153 @@ namespace Stalker2ModManager.Services
         {
             try
             {
-                // Пробуем найти файл в папке Localization (новая структура)
-                var localizationFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", "localization.json");
+                // Сначала проверяем, есть ли путь к внешнему файлу локализации в конфиге
+                var configService = new ConfigService();
+                var config = configService.LoadPathsConfig();
                 
-                // Если файл не найден в папке Localization, пробуем в корне (обратная совместимость)
-                if (!File.Exists(localizationFile))
+                if (!string.IsNullOrWhiteSpace(config.CustomLocalizationPath) && File.Exists(config.CustomLocalizationPath))
                 {
-                    localizationFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "localization.json");
-                }
-                
-                if (File.Exists(localizationFile))
-                {
-                    var json = File.ReadAllText(localizationFile);
+                    // Загружаем из внешнего файла
+                    var json = File.ReadAllText(config.CustomLocalizationPath);
                     _translations = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(json);
                     
-                    if (_translations == null || _translations.Count == 0)
+                    if (_translations != null && _translations.Count > 0)
                     {
-                        // Fallback to built-in translations if file is empty or invalid
-                        LoadBuiltInTranslations();
+                        Logger.Instance.LogInfo($"Loaded localization from external file: {config.CustomLocalizationPath}");
+                        return;
                     }
                 }
-                else
+                
+                // Если внешний файл не найден или пуст, загружаем из embedded resource
+                LoadTranslationsFromEmbeddedResource();
+            }
+            catch (Exception ex)
+            {
+                // Log error and fallback to embedded resource
+                Logger.Instance.LogError("Error loading localization file", ex);
+                LoadTranslationsFromEmbeddedResource();
+            }
+        }
+
+        private void LoadTranslationsFromEmbeddedResource()
+        {
+            try
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                
+                // Пробуем разные возможные имена ресурсов
+                var possibleNames = new[]
                 {
-                    // Fallback to built-in translations if file doesn't exist
-                    LoadBuiltInTranslations();
+                    "Stalker2ModManager.Localization.localization.json",
+                    "Stalker2VortexHelper.Localization.localization.json",
+                    "Localization.localization.json",
+                    "localization.json"
+                };
+                
+                // Также ищем все ресурсы, содержащие "localization.json"
+                var allResourceNames = assembly.GetManifestResourceNames();
+                var localizationResourceName = allResourceNames.FirstOrDefault(name => 
+                    name.EndsWith("localization.json", StringComparison.OrdinalIgnoreCase));
+                
+                if (localizationResourceName != null)
+                {
+                    possibleNames = new[] { localizationResourceName }.Concat(possibleNames).Distinct().ToArray();
                 }
+                
+                foreach (var resourceName in possibleNames)
+                {
+                    using (var stream = assembly.GetManifestResourceStream(resourceName))
+                    {
+                        if (stream != null)
+                        {
+                            using (var reader = new StreamReader(stream))
+                            {
+                                var json = reader.ReadToEnd();
+                                _translations = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(json);
+                                
+                                if (_translations != null && _translations.Count > 0)
+                                {
+                                    Logger.Instance.LogInfo($"Loaded localization from embedded resource: {resourceName}");
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Fallback to built-in translations if embedded resource not found
+                Logger.Instance.LogWarning("Embedded localization resource not found, using built-in translations");
+                LoadBuiltInTranslations();
             }
             catch (Exception ex)
             {
                 // Log error and fallback to built-in translations
-                Logger.Instance.LogError("Error loading localization file", ex);
+                Logger.Instance.LogError("Error loading localization from embedded resource", ex);
                 LoadBuiltInTranslations();
+            }
+        }
+        
+        public void LoadFromExternalFile(string filePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                {
+                    Logger.Instance.LogWarning($"Localization file not found: {filePath}");
+                    return;
+                }
+                
+                var json = File.ReadAllText(filePath);
+                var newTranslations = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(json);
+                
+                if (newTranslations != null && newTranslations.Count > 0)
+                {
+                    _translations = newTranslations;
+                    
+                    // Сохраняем путь в конфиге
+                    var configService = new ConfigService();
+                    var config = configService.LoadPathsConfig();
+                    config.CustomLocalizationPath = filePath;
+                    configService.SavePathsConfig(config);
+                    
+                    Logger.Instance.LogInfo($"Loaded localization from external file: {filePath}");
+                    
+                    // Вызываем событие изменения языка для обновления UI
+                    LanguageChanged?.Invoke(this, EventArgs.Empty);
+                }
+                else
+                {
+                    Logger.Instance.LogWarning("External localization file is empty or invalid");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.LogError("Error loading localization from external file", ex);
+                throw;
+            }
+        }
+        
+        public void ResetToEmbedded()
+        {
+            try
+            {
+                // Очищаем путь к внешнему файлу в конфиге
+                var configService = new ConfigService();
+                var config = configService.LoadPathsConfig();
+                config.CustomLocalizationPath = string.Empty;
+                configService.SavePathsConfig(config);
+                
+                // Загружаем из embedded resource
+                LoadTranslationsFromEmbeddedResource();
+                
+                // Вызываем событие изменения языка для обновления UI
+                LanguageChanged?.Invoke(this, EventArgs.Empty);
+                
+                Logger.Instance.LogInfo("Reset to embedded localization");
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.LogError("Error resetting to embedded localization", ex);
             }
         }
 

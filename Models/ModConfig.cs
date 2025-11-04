@@ -7,6 +7,7 @@ namespace Stalker2ModManager.Models
         public double WindowWidth { get; set; } = 800;
         public double WindowHeight { get; set; } = 600;
         public string Language { get; set; } = "en";
+        public string CustomLocalizationPath { get; set; } = string.Empty;
     }
 }
 

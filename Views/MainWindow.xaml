@@ -559,6 +559,10 @@
                 <MenuItem x:Name="ToolsMenuItem" Header="_Tools">
                     <MenuItem x:Name="AdvancedMenuItem" Header="_Advanced" Click="Advanced_Click" Style="{StaticResource SubmenuMenuItemStyle}"/>
                 </MenuItem>
+                <MenuItem x:Name="SettingsMenuItem" Header="_Settings">
+                    <MenuItem x:Name="LoadCustomLocalizationMenuItem" Header="_Load Custom Localization..." Click="LoadCustomLocalization_Click" Style="{StaticResource SubmenuMenuItemStyle}"/>
+                    <MenuItem x:Name="ResetLocalizationMenuItem" Header="_Reset to Default Localization" Click="ResetLocalization_Click" Style="{StaticResource SubmenuMenuItemStyle}"/>
+                </MenuItem>
                 <MenuItem x:Name="InstallMenuItem" Header="_Install">
                     <MenuItem x:Name="InstallModsMenuItem" Header="_Install Mods" Click="InstallMods_Click" Style="{StaticResource SubmenuMenuItemStyle}"/>
                     <MenuItem x:Name="ClearModsMenuItem" Header="_Clear ~mods Folder" Click="ClearMods_Click" Style="{StaticResource SubmenuMenuItemStyle}"/>

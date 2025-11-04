@@ -719,6 +719,65 @@ namespace Stalker2ModManager.Views
             }
         }
 
+        private void LoadCustomLocalization_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using (var dialog = new System.Windows.Forms.OpenFileDialog())
+                {
+                    dialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*";
+                    dialog.Title = _localization.GetString("SelectJsonFile");
+                    
+                    if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    {
+                        _localization.LoadFromExternalFile(dialog.FileName);
+                        UpdateLocalization(); // Обновляем UI с новой локализацией
+                        UpdateStatus($"Loaded custom localization from: {System.IO.Path.GetFileName(dialog.FileName)}");
+                        _logger.LogSuccess($"Loaded custom localization from: {dialog.FileName}");
+                        WarningWindow.Show(
+                            _localization.GetString("ConfigSavedSuccess"),
+                            _localization.GetString("Success"),
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error loading custom localization", ex);
+                WarningWindow.Show(
+                    $"Error loading localization: {ex.Message}",
+                    _localization.GetString("Error"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void ResetLocalization_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                _localization.ResetToEmbedded();
+                UpdateLocalization(); // Обновляем UI с локализацией по умолчанию
+                UpdateStatus("Reset to default localization");
+                _logger.LogSuccess("Reset to default localization");
+                WarningWindow.Show(
+                    _localization.GetString("ConfigSavedSuccess"),
+                    _localization.GetString("Success"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error resetting localization", ex);
+                WarningWindow.Show(
+                    $"Error resetting localization: {ex.Message}",
+                    _localization.GetString("Error"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
         private void UpdateStatus(string message)
         {
             StatusTextBlock.Text = message;
@@ -1628,6 +1687,9 @@ namespace Stalker2ModManager.Views
                 ExportOrderMenuItem.Header = "_" + _localization.GetString("ExportOrder");
                 ImportOrderMenuItem.Header = "_" + _localization.GetString("ImportOrder");
                 AdvancedMenuItem.Header = "_" + _localization.GetString("Advanced");
+                SettingsMenuItem.Header = "_" + _localization.GetString("Settings");
+                LoadCustomLocalizationMenuItem.Header = "_" + _localization.GetString("LoadCustomLocalization");
+                ResetLocalizationMenuItem.Header = "_" + _localization.GetString("ResetLocalization");
                 InstallModsMenuItem.Header = _localization.GetString("InstallMods");
                 ClearModsMenuItem.Header = "_" + _localization.GetString("ClearMods");
                 
