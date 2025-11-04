@@ -1,6 +1,6 @@
-🌐 Languages: [English(current)](RELEASE_NOTES%20v1.0.1.md) | [Русский](RELEASE_NOTES%20v1.0.1.ru.md)
+🌐 Languages: [English(current)](RELEASE_NOTES%20v1.1.0.md) | [Русский](RELEASE_NOTES%20v1.1.0.ru.md)
 
-# Release Notes - v1.0.1
+# Release Notes - v1.1.0
 
 ## S.T.A.L.K.E.R. 2 Mod Manager - Update Release
 
@@ -56,7 +56,7 @@ If you're upgrading from v1.0.0:
 
 ### Installation
 
-1. Download the v1.0.1 release from GitHub
+1. Download the v1.1.0 release from GitHub
 2. Extract the application
 3. Run `Stalker2ModManager.exe`
 4. Update your path configuration if needed (now specify game root instead of ~mods path)
