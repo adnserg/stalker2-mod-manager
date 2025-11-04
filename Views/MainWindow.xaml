@@ -798,7 +798,6 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock x:Name="StatusTextBlock" Text="Ready" VerticalAlignment="Center"/>
                                 <ProgressBar x:Name="ProgressBar" 
                                     Grid.Column="1" 
                                     Width="200" 
@@ -808,6 +807,7 @@
                                     Maximum="100" 
                                     Value="0"
                                     Visibility="Collapsed"/>
+                                <TextBlock x:Name="StatusTextBlock" Text="Ready" VerticalAlignment="Center"/>
                             </Grid>
                         </StatusBar>
                         <Grid Grid.Row="1">

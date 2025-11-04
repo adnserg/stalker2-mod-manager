@@ -1,6 +1,9 @@
+using Stalker2ModManager.Models;
+using Stalker2ModManager.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -11,8 +14,6 @@ using System.Windows.Documents;
 using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media;
-using Stalker2ModManager.Models;
-using Stalker2ModManager.Services;
 
 namespace Stalker2ModManager.Views
 {
@@ -404,18 +405,19 @@ namespace Stalker2ModManager.Views
 
             try
             {
+                UpdateStatus("");
                 var progress = new Progress<InstallProgress>(p =>
                 {
                     ProgressBar.Value = p.Percentage;
-                    ProgressTextBlock.Text = p.CurrentMod;
-                    UpdateStatus($"Installing: {p.CurrentMod} ({p.Installed}/{p.Total})");
+                    ProgressTextBlock.Text = $"Installing: {p.CurrentMod} ({p.Installed}/{p.Total})";
+                    //UpdateStatus($"Installing: {p.CurrentMod} ({p.Installed}/{p.Total})");
                 });
 
                 var enabledModsCount = _mods.Count(m => m.IsEnabled);
                 _logger.LogInfo($"Starting mods installation. Target: {TargetPathTextBox.Text}, Enabled mods: {enabledModsCount}");
                 
                 await _modManagerService.InstallModsAsync(_mods.ToList(), TargetPathTextBox.Text, progress);
-                
+
                 UpdateStatus($"Installed {enabledModsCount} mods");
                 _logger.LogSuccess($"Mods installed successfully. Installed {enabledModsCount} mods to {TargetPathTextBox.Text}");
                 WarningWindow.Show(_localization.GetString("ModsInstalledSuccess"), _localization.GetString("Success"), MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1736,10 +1738,10 @@ namespace Stalker2ModManager.Views
                     targetFolderHeader.Text = _localization.GetString("TargetFolderHeader");
                 
                 // Status
-                if (StatusTextBlock.Text == "Ready" || StatusTextBlock.Text == "Готов")
-                {
-                    StatusTextBlock.Text = _localization.GetString("Status");
-                }
+                //if (StatusTextBlock.Text == "Ready" || StatusTextBlock.Text == "Готов")
+                //{
+                //    StatusTextBlock.Text = _localization.GetString("Status");
+                //}
             }
             catch (Exception ex)
             {
