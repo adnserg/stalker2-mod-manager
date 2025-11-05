@@ -3,6 +3,8 @@ using Stalker2ModManager.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Data;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -30,6 +32,11 @@ namespace Stalker2ModManager.Views
         private System.Windows.Threading.DispatcherTimer _scrollTimer;
         private System.Windows.Controls.ListBoxItem? _draggedListItem;
         private InsertionLineAdorner? _insertionLineAdorner;
+        
+        // Состояние для отслеживания изменений списка модов
+        private List<ModInfo> _originalModsState = new List<ModInfo>();
+        private bool _hasUnsavedChanges = false;
+        private bool _isClosing = false;
 
         public MainWindow()
         {
@@ -53,8 +60,14 @@ namespace Stalker2ModManager.Views
             
             LoadConfig();
             
+            // Сохраняем исходное состояние модов
+            SaveOriginalModsState();
+            
             // Подписываемся на изменение языка
             _localization.LanguageChanged += Localization_LanguageChanged;
+            
+            // Подписываемся на изменения модов для отслеживания несохраненных изменений
+            _mods.CollectionChanged += Mods_CollectionChanged;
             
             // Инициализируем ComboBox языков
             InitializeLanguageComboBox();
@@ -246,6 +259,15 @@ namespace Stalker2ModManager.Views
 
                 UpdateOrders();
                 
+                // Подписываемся на изменения всех модов
+                foreach (var mod in _mods)
+                {
+                    SubscribeToModChanges(mod);
+                }
+                
+                // Сохраняем исходное состояние после загрузки модов
+                SaveOriginalModsState();
+                
                 // Включаем кнопку Install Mods если моды загружены
                 InstallModsButton.IsEnabled = _mods.Count > 0;
                 
@@ -277,6 +299,11 @@ namespace Stalker2ModManager.Views
                 _configService.SaveModsOrder(modsOrder);
                 _logger.LogInfo($"Mods order saved: {modsOrder.Mods.Count} mods");
 
+                // Сохраняем текущее состояние как исходное
+                SaveOriginalModsState();
+                _hasUnsavedChanges = false;
+                UpdateSaveCancelButtons();
+
                 UpdateStatus("Config saved");
                 WarningWindow.Show(_localization.GetString("ConfigSavedSuccess"), _localization.GetString("Success"), MessageBoxButton.OK, MessageBoxImage.Information);
                 _logger.LogSuccess("Config saved successfully");
@@ -285,6 +312,175 @@ namespace Stalker2ModManager.Views
             {
                 _logger.LogError("Error saving config", ex);
                 WarningWindow.Show($"{_localization.GetString("ErrorSavingConfig")}: {ex.Message}", _localization.GetString("Error"), MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void CancelChanges_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_hasUnsavedChanges)
+            {
+                return;
+            }
+            
+            var result = WarningWindow.Show(
+                "Отменить все несохраненные изменения списка модов?",
+                "Отменить изменения",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            
+            if (result == MessageBoxResult.Yes)
+            {
+                CancelChanges();
+            }
+        }
+        
+        private void CancelChanges()
+        {
+            try
+            {
+                // Восстанавливаем исходное состояние модов
+                _mods.Clear();
+                
+                // Отписываемся от событий, чтобы не помечать изменения при восстановлении
+                _mods.CollectionChanged -= Mods_CollectionChanged;
+                
+                foreach (var originalMod in _originalModsState)
+                {
+                    var mod = new ModInfo
+                    {
+                        SourcePath = originalMod.SourcePath,
+                        Name = originalMod.Name,
+                        Order = originalMod.Order,
+                        IsEnabled = originalMod.IsEnabled
+                    };
+                    
+                    // Подписываемся на изменения каждого мода
+                    SubscribeToModChanges(mod);
+                    
+                    _mods.Add(mod);
+                }
+                
+                // Подписываемся обратно
+                _mods.CollectionChanged += Mods_CollectionChanged;
+                
+                UpdateOrders();
+                _hasUnsavedChanges = false;
+                UpdateSaveCancelButtons();
+                
+                UpdateStatus("Changes cancelled");
+                _logger.LogInfo("Changes cancelled");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error cancelling changes", ex);
+                WarningWindow.Show($"Ошибка при отмене изменений: {ex.Message}", _localization.GetString("Error"), MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
+        private void SaveOriginalModsState()
+        {
+            _originalModsState.Clear();
+            foreach (var mod in _mods)
+            {
+                _originalModsState.Add(new ModInfo
+                {
+                    SourcePath = mod.SourcePath,
+                    Name = mod.Name,
+                    Order = mod.Order,
+                    IsEnabled = mod.IsEnabled
+                });
+            }
+            _hasUnsavedChanges = false;
+            UpdateSaveCancelButtons();
+        }
+        
+        private void Mods_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (_isClosing) return;
+            
+            // Подписываемся на изменения новых модов
+            if (e.NewItems != null)
+            {
+                foreach (ModInfo mod in e.NewItems)
+                {
+                    SubscribeToModChanges(mod);
+                }
+            }
+            
+            // Отмечаем изменения при изменении коллекции
+            MarkAsChanged();
+        }
+        
+        private void SubscribeToModChanges(ModInfo mod)
+        {
+            mod.PropertyChanged += (s, e) =>
+            {
+                if (_isClosing) return;
+                
+                // Отслеживаем изменения Order и IsEnabled
+                if (e.PropertyName == nameof(ModInfo.Order) || e.PropertyName == nameof(ModInfo.IsEnabled))
+                {
+                    MarkAsChanged();
+                }
+            };
+        }
+        
+        private void MarkAsChanged()
+        {
+            if (_isClosing) return;
+            
+            // Проверяем, действительно ли есть изменения
+            if (HasChanges())
+            {
+                _hasUnsavedChanges = true;
+                UpdateSaveCancelButtons();
+            }
+            else
+            {
+                _hasUnsavedChanges = false;
+                UpdateSaveCancelButtons();
+            }
+        }
+        
+        private bool HasChanges()
+        {
+            // Проверяем количество модов
+            if (_mods.Count != _originalModsState.Count)
+            {
+                return true;
+            }
+            
+            // Создаем словарь исходных модов по имени
+            var originalModsByName = _originalModsState.ToDictionary(m => m.Name, m => m);
+            
+            // Проверяем каждый текущий мод
+            foreach (var mod in _mods)
+            {
+                if (!originalModsByName.TryGetValue(mod.Name, out var originalMod))
+                {
+                    return true; // Мод добавлен или удален
+                }
+                
+                // Проверяем изменения Order и IsEnabled
+                if (mod.Order != originalMod.Order || mod.IsEnabled != originalMod.IsEnabled)
+                {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        private void UpdateSaveCancelButtons()
+        {
+            // Обновляем состояние кнопок Сохранить/Отменить
+            if (SaveChangesButton != null)
+            {
+                SaveChangesButton.IsEnabled = _hasUnsavedChanges;
+            }
+            if (CancelChangesButton != null)
+            {
+                CancelChangesButton.IsEnabled = _hasUnsavedChanges;
             }
         }
 
@@ -718,6 +914,12 @@ namespace Stalker2ModManager.Views
 
             // Обновляем порядки после сортировки
             UpdateOrders();
+            
+            // Подписываемся на изменения всех модов
+            foreach (var mod in _mods)
+            {
+                SubscribeToModChanges(mod);
+            }
             
             // Включаем/выключаем кнопку Install Mods в зависимости от наличия модов
             InstallModsButton.IsEnabled = _mods.Count > 0;
@@ -1869,6 +2071,40 @@ namespace Stalker2ModManager.Views
             {
                 _logger.LogError($"Error updating localization: {ex.Message}");
             }
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            // Проверяем наличие несохраненных изменений списка модов
+            if (_hasUnsavedChanges)
+            {
+                var result = WarningWindow.Show(
+                    "У вас есть несохраненные изменения списка модов. Сохранить перед закрытием?",
+                    "Несохраненные изменения",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+                
+                if (result == MessageBoxResult.Yes)
+                {
+                    SaveConfig_Click(this, new RoutedEventArgs());
+                    _isClosing = true;
+                }
+                else if (result == MessageBoxResult.Cancel)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+                else
+                {
+                    _isClosing = true;
+                }
+            }
+            else
+            {
+                _isClosing = true;
+            }
+            
+            base.OnClosing(e);
         }
 
         protected override void OnClosed(EventArgs e)
