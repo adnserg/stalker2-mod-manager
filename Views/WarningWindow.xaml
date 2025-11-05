@@ -74,7 +74,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" 
+                    <TextBlock x:Name="txtIcon" Grid.Column="0" 
                              Text="⚠️" 
                              FontSize="32" 
                              VerticalAlignment="Top" 

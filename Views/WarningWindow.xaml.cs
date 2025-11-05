@@ -14,20 +14,24 @@ namespace Stalker2ModManager.Views
             InitializeComponent();
             
             var localization = LocalizationService.Instance;
-            
-            // Настраиваем заголовок в зависимости от типа
-            //if (icon == MessageBoxImage.Error)
-            //{
-            //    TitleTextBlock.Text = localization.GetString("Error");
-            //}
-            //else if (icon == MessageBoxImage.Information)
-            //{
-            //    TitleTextBlock.Text = localization.GetString("Success");
-            //}
-            //else
-            //{
-            //    TitleTextBlock.Text = localization.GetString("Warning");
-            //}
+
+            //Настраиваем иконку и заголовок в зависимости от типа
+            if (icon == MessageBoxImage.Error)
+            {
+                txtIcon.Text = "❌";
+                //TitleTextBlock.Text = localization.GetString("Error");
+            }
+            else if (icon == MessageBoxImage.Information)
+            {
+                txtIcon.Text = "ℹ️";
+                //TitleTextBlock.Text = localization.GetString("Success");
+            }
+            else
+            {
+                txtIcon.Text = "⚠️";
+                //TitleTextBlock.Text = localization.GetString("Warning");
+            }
+
             TitleTextBlock.Text = title;
             
             MessageTextBlock.Text = message;

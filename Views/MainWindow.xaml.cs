@@ -1,3 +1,4 @@
+using Stalker2ModManager.Helpers;
 using Stalker2ModManager.Models;
 using Stalker2ModManager.Services;
 using System;
@@ -25,16 +26,16 @@ namespace Stalker2ModManager.Views
         private readonly ConfigService _configService;
         private readonly Services.Logger _logger;
         private readonly Services.LocalizationService _localization;
-        private ObservableCollection<ModInfo> _mods;
-        private System.Windows.Data.CollectionViewSource _modsViewSource;
+        private readonly ObservableCollection<ModInfo> _mods;
+        private readonly System.Windows.Data.CollectionViewSource _modsViewSource;
         private ModInfo? _draggedMod;
         private Point _dragStartPoint;
-        private System.Windows.Threading.DispatcherTimer _scrollTimer;
+        private readonly System.Windows.Threading.DispatcherTimer _scrollTimer;
         private System.Windows.Controls.ListBoxItem? _draggedListItem;
         private InsertionLineAdorner? _insertionLineAdorner;
         
         // Состояние для отслеживания изменений списка модов
-        private List<ModInfo> _originalModsState = new List<ModInfo>();
+        private readonly List<ModInfo> _originalModsState = [];
         private bool _hasUnsavedChanges = false;
         private bool _isClosing = false;
 
@@ -230,7 +231,7 @@ namespace Stalker2ModManager.Views
                 var orderByName = savedOrder.Mods.ToDictionary(m => m.Name, m => m);
 
                 // Находим максимальный порядок из сохраненных модов
-                int maxOrder = savedOrder.Mods.Any() ? savedOrder.Mods.Max(m => m.Order) : -1;
+                int maxOrder = savedOrder.Mods.Count != 0 ? savedOrder.Mods.Max(m => m.Order) : -1;
 
                 // Устанавливаем порядок из сохраненного конфига или добавляем в конец
                 foreach (var mod in mods)
@@ -310,7 +311,7 @@ namespace Stalker2ModManager.Views
             try
             {
                 // Сохраняем ТОЛЬКО список модов
-                var modsOrder = _configService.CreateModOrderFromMods(_mods.ToList());
+                var modsOrder = _configService.CreateModOrderFromMods([.. _mods]);
                 _configService.SaveModsOrder(modsOrder);
                 _logger.LogInfo($"Mods order saved: {modsOrder.Mods.Count} mods");
 
@@ -545,7 +546,7 @@ namespace Stalker2ModManager.Views
                 }
 
                 // Применяем порядок модов, если он загружен
-                if (modsOrder != null && modsOrder.Mods.Any())
+                if (modsOrder != null && modsOrder.Mods.Count != 0)
                 {
                     // Применяем порядок к текущим модам
                     ApplyModsOrder(modsOrder);
@@ -629,7 +630,7 @@ namespace Stalker2ModManager.Views
                 var enabledModsCount = _mods.Count(m => m.IsEnabled);
                 _logger.LogInfo($"Starting mods installation. Target: {TargetPathTextBox.Text}, Enabled mods: {enabledModsCount}");
                 
-                await _modManagerService.InstallModsAsync(_mods.ToList(), TargetPathTextBox.Text, progress);
+                await _modManagerService.InstallModsAsync([.. _mods], TargetPathTextBox.Text, progress);
 
                 UpdateStatus($"Installed {enabledModsCount} mods");
                 _logger.LogSuccess($"Mods installed successfully. Installed {enabledModsCount} mods to {TargetPathTextBox.Text}");
@@ -761,8 +762,8 @@ namespace Stalker2ModManager.Views
                 else
                 {
                     string searchLower = searchText.ToLowerInvariant();
-                    e.Accepted = mod.Name.ToLowerInvariant().Contains(searchLower) ||
-                                 mod.TargetFolderName.ToLowerInvariant().Contains(searchLower);
+                    e.Accepted = mod.Name.Contains(searchLower, StringComparison.InvariantCultureIgnoreCase) ||
+                                 mod.TargetFolderName.Contains(searchLower, StringComparison.InvariantCultureIgnoreCase);
                 }
             }
             else
@@ -850,7 +851,7 @@ namespace Stalker2ModManager.Views
                     var orderByName = savedOrder.Mods.ToDictionary(m => m.Name, m => m);
 
                     // Находим максимальный порядок из сохраненных модов
-                    int maxOrder = savedOrder.Mods.Any() ? savedOrder.Mods.Max(m => m.Order) : -1;
+                    int maxOrder = savedOrder.Mods.Count != 0 ? savedOrder.Mods.Max(m => m.Order) : -1;
 
                     // Устанавливаем порядок из сохраненного конфига или добавляем в конец
                     foreach (var mod in mods)
@@ -896,7 +897,7 @@ namespace Stalker2ModManager.Views
             if (_mods.Count == 0)
             {
                 var modsOrder = _configService.LoadModsOrder();
-                if (modsOrder.Mods.Any())
+                if (modsOrder.Mods.Count != 0)
                 {
                     ApplyModsOrder(modsOrder);
                     _logger.LogDebug($"Applied saved mods order on startup: {modsOrder.Mods.Count} mods");
@@ -960,7 +961,7 @@ namespace Stalker2ModManager.Views
 
                 if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
-                    var modsOrder = _configService.CreateModOrderFromMods(_mods.ToList());
+                    var modsOrder = _configService.CreateModOrderFromMods([.. _mods]);
                     _configService.SaveModsOrderToFile(modsOrder, dialog.FileName);
                     UpdateStatus($"Mods order exported to {System.IO.Path.GetFileName(dialog.FileName)}");
                     _logger.LogSuccess($"Mods order exported to {dialog.FileName}");
@@ -995,7 +996,7 @@ namespace Stalker2ModManager.Views
                 {
                     var modsOrder = _configService.LoadModsOrderFromFile(dialog.FileName);
                     
-                    if (modsOrder.Mods.Any())
+                    if (modsOrder.Mods.Count != 0)
                     {
                         ApplyModsOrder(modsOrder);
                         UpdateStatus($"Mods order imported from {System.IO.Path.GetFileName(dialog.FileName)}");
@@ -1020,23 +1021,21 @@ namespace Stalker2ModManager.Views
         {
             try
             {
-                using (var dialog = new System.Windows.Forms.OpenFileDialog())
+                using var dialog = new System.Windows.Forms.OpenFileDialog();
+                dialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*";
+                dialog.Title = _localization.GetString("SelectJsonFile");
+
+                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
-                    dialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*";
-                    dialog.Title = _localization.GetString("SelectJsonFile");
-                    
-                    if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                    {
-                        _localization.LoadFromExternalFile(dialog.FileName);
-                        UpdateLocalization(); // Обновляем UI с новой локализацией
-                        UpdateStatus($"Loaded custom localization from: {System.IO.Path.GetFileName(dialog.FileName)}");
-                        _logger.LogSuccess($"Loaded custom localization from: {dialog.FileName}");
-                        WarningWindow.Show(
-                            _localization.GetString("ConfigSavedSuccess"),
-                            _localization.GetString("Success"),
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
-                    }
+                    _localization.LoadFromExternalFile(dialog.FileName);
+                    UpdateLocalization(); // Обновляем UI с новой локализацией
+                    UpdateStatus($"Loaded custom localization from: {System.IO.Path.GetFileName(dialog.FileName)}");
+                    _logger.LogSuccess($"Loaded custom localization from: {dialog.FileName}");
+                    WarningWindow.Show(
+                        _localization.GetString("ConfigSavedSuccess"),
+                        _localization.GetString("Success"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
@@ -1125,7 +1124,7 @@ namespace Stalker2ModManager.Views
                     _logger.LogInfo($"Reading TXT file: {jsonFilePath}");
                     // Читаем TXT файл построчно
                     var lines = System.IO.File.ReadAllLines(jsonFilePath);
-                    files = new List<string>();
+                    files = [];
 
                     foreach (var line in lines)
                     {
@@ -1138,7 +1137,7 @@ namespace Stalker2ModManager.Views
                         trimmed = trimmed.Trim('"', ',', ' ');
                         
                         // Если строка содержит путь (с обратным слешем), добавляем её
-                        if (trimmed.Contains("\\") || trimmed.Contains("/"))
+                        if (trimmed.Contains('\\') || trimmed.Contains('/'))
                         {
                             files.Add(trimmed);
                         }
@@ -1203,10 +1202,10 @@ namespace Stalker2ModManager.Views
 
                 foreach (var file in files)
                 {
-                    if (string.IsNullOrEmpty(file) || (!file.Contains("\\") && !file.Contains("/")))
+                    if (string.IsNullOrEmpty(file) || (!file.Contains('\\') && !file.Contains('/')))
                         continue;
 
-                    var separator = file.Contains("\\") ? '\\' : '/';
+                    var separator = file.Contains('\\') ? '\\' : '/';
                     var parts = file.Split(separator);
                     if (parts.Length > 0)
                     {
@@ -1217,26 +1216,26 @@ namespace Stalker2ModManager.Views
                         var firstDashIndex = folderName.IndexOf('-');
                         if (firstDashIndex > 0 && firstDashIndex < folderName.Length - 1)
                         {
-                            var prefix = folderName.Substring(0, firstDashIndex);
+                            var prefix = folderName[..firstDashIndex];
                             
                             // Проверяем, что префикс состоит только из букв (например, AAA, AAB, AAH)
                             if (prefix.Length >= 2 && prefix.All(c => System.Char.IsLetter(c)))
                             {
                                 // Извлекаем имя мода без префикса (все после первого дефиса)
-                                var modName = folderName.Substring(firstDashIndex + 1);
-                                
+                                var modName = folderName[(firstDashIndex + 1)..];
+
                                 // Пропускаем пустые имена
                                 if (string.IsNullOrWhiteSpace(modName))
                                     continue;
-                                
+
                                 // Используем HashSet для уникальности (без учета регистра)
                                 var modNameKey = modName.ToLowerInvariant();
-                                if (!seenMods.Contains(modNameKey))
-                                {
-                                    seenMods.Add(modNameKey);
-                                    modOrderList.Add(modName); // Сохраняем оригинальное имя с регистром
-                                    _logger.LogDebug($"Found mod in order [{modOrderList.Count - 1}]: '{modName}' (from '{folderName}')");
-                                }
+
+                                if (seenMods.Contains(modNameKey)) continue;
+
+                                seenMods.Add(modNameKey);
+                                modOrderList.Add(modName); // Сохраняем оригинальное имя с регистром
+                                _logger.LogDebug($"Found mod in order [{modOrderList.Count - 1}]: '{modName}' (from '{folderName}')");
                             }
                         }
                     }
@@ -1255,7 +1254,7 @@ namespace Stalker2ModManager.Views
                     StringComparer.OrdinalIgnoreCase);
 
                 // Функция для извлечения базового названия мода (без версий и ID)
-                string GetBaseModName(string fullName)
+                static string GetBaseModName(string fullName)
                 {
                     // Убираем версии типа -1621-1-9-1760894384 или -1621-2-0-1761270207
                     // Ищем паттерн: буквы-цифры-цифры-цифры-цифры
@@ -1279,11 +1278,13 @@ namespace Stalker2ModManager.Views
                 foreach (var mod in modsByLowerName.Values)
                 {
                     var baseName = GetBaseModName(mod.Name).ToLowerInvariant();
-                    if (!modsByBaseName.ContainsKey(baseName))
+                    if (!modsByBaseName.TryGetValue(baseName, out List<ModInfo>? value))
                     {
-                        modsByBaseName[baseName] = new List<ModInfo>();
+                        value = [];
+                        modsByBaseName[baseName] = value;
                     }
-                    modsByBaseName[baseName].Add(mod);
+
+                    value.Add(mod);
                 }
 
                 // Обновляем порядок модов согласно порядку из файла
@@ -1426,7 +1427,7 @@ namespace Stalker2ModManager.Views
 
                 UpdateOrders();
                 var fileName = System.IO.Path.GetFileName(jsonFilePath);
-                var fileType = System.IO.Path.GetExtension(jsonFilePath).ToLower() == ".txt" ? "TXT" : "JSON";
+                var fileType = System.IO.Path.GetExtension(jsonFilePath).Equals(".txt", StringComparison.CurrentCultureIgnoreCase) ? "TXT" : "JSON";
                 
                 // Включаем/выключаем кнопку Install Mods в зависимости от наличия модов
                 InstallModsButton.IsEnabled = _mods.Count > 0;
@@ -1518,29 +1519,28 @@ namespace Stalker2ModManager.Views
                 // Начинаем drag если мышь переместилась достаточно далеко
                 if (distance > 5)
                 {
-                    var listBox = sender as System.Windows.Controls.ListBox;
-                    if (listBox != null)
+                    if (sender is System.Windows.Controls.ListBox listBox)
                     {
                         // Применяем визуальный эффект к перетаскиваемому элементу
                         ApplyDragVisualEffect();
-                        
+
                         // Создаем индикатор вставки
                         CreateInsertionIndicator();
-                        
+
                         // Подписываемся на GiveFeedback для визуальной обратной связи
                         listBox.GiveFeedback += ModsListBox_GiveFeedback;
-                        
+
                         var data = new System.Windows.DataObject(typeof(ModInfo), _draggedMod);
                         System.Windows.DragDrop.DoDragDrop(listBox, data, System.Windows.DragDropEffects.Move);
-                        
+
                         listBox.GiveFeedback -= ModsListBox_GiveFeedback;
-                        
+
                         // Удаляем индикатор вставки
                         RemoveInsertionIndicator();
-                        
+
                         // Восстанавливаем визуальный стиль после завершения drag
                         RestoreDraggedItemVisual();
-                        
+
                         _draggedMod = null;
                         _draggedListItem = null;
                         _scrollTimer.Stop(); // Останавливаем автоскролл после завершения drag
@@ -1661,8 +1661,7 @@ namespace Stalker2ModManager.Views
                     {
                         if (item == _draggedMod)
                         {
-                            var container = listBox.ItemContainerGenerator.ContainerFromItem(item) as System.Windows.Controls.ListBoxItem;
-                            if (container != null)
+                            if (listBox.ItemContainerGenerator.ContainerFromItem(item) is System.Windows.Controls.ListBoxItem container)
                             {
                                 _draggedListItem = container;
                                 break;
@@ -1714,10 +1713,7 @@ namespace Stalker2ModManager.Views
                 try
                 {
                     var adornerLayer = AdornerLayer.GetAdornerLayer(ModsListBox);
-                    if (adornerLayer != null)
-                    {
-                        adornerLayer.Remove(_insertionLineAdorner);
-                    }
+                    adornerLayer?.Remove(_insertionLineAdorner);
                 }
                 catch (Exception ex)
                 {
@@ -1742,17 +1738,16 @@ namespace Stalker2ModManager.Views
                 if (item is ModInfo targetMod && targetMod != _draggedMod)
                 {
                     // Находим ListBoxItem для целевого элемента
-                    var targetListItem = listBox.ItemContainerGenerator.ContainerFromItem(targetMod) as System.Windows.Controls.ListBoxItem;
-                    if (targetListItem != null)
+                    if (listBox.ItemContainerGenerator.ContainerFromItem(targetMod) is System.Windows.Controls.ListBoxItem targetListItem)
                     {
                         // Определяем, вставляем ли мы выше или ниже элемента
                         var itemPoint = e.GetPosition(targetListItem);
                         var isAbove = itemPoint.Y < targetListItem.ActualHeight / 2;
-                        
-                        var insertionY = isAbove 
+
+                        var insertionY = isAbove
                             ? targetListItem.TranslatePoint(new Point(0, 0), listBox).Y
                             : targetListItem.TranslatePoint(new Point(0, targetListItem.ActualHeight), listBox).Y;
-                        
+
                         _insertionLineAdorner.UpdatePosition(insertionY);
                     }
                 }
@@ -1791,8 +1786,7 @@ namespace Stalker2ModManager.Views
             // Восстанавливаем визуальный стиль перетаскиваемого элемента
             RestoreDraggedItemVisual();
 
-            System.Windows.Controls.ListBox? listBox = sender as System.Windows.Controls.ListBox;
-            if (listBox == null) return;
+            if (sender is not System.Windows.Controls.ListBox listBox) return;
 
             ModInfo? draggedMod = null;
             
@@ -1860,26 +1854,25 @@ namespace Stalker2ModManager.Views
                     // Находим ближайший элемент
                     for (int i = 0; i < listBox.Items.Count; i++)
                     {
-                        var item = listBox.ItemContainerGenerator.ContainerFromIndex(i) as System.Windows.Controls.ListBoxItem;
-                        if (item != null)
+                        if (listBox.ItemContainerGenerator.ContainerFromIndex(i) is System.Windows.Controls.ListBoxItem item)
                         {
                             var itemTop = item.TranslatePoint(new Point(0, 0), listBox).Y;
                             var itemBottom = itemTop + item.ActualHeight;
-                            
+
                             if (point.Y >= itemTop && point.Y <= itemBottom)
                             {
                                 // Нашли элемент, используем ту же логику
                                 var itemPoint = e.GetPosition(item);
                                 var isAbove = itemPoint.Y < item.ActualHeight / 2;
-                                
+
                                 int oldIndex = _mods.IndexOf(draggedMod);
                                 int newIndex = i;
-                                
+
                                 if (!isAbove && oldIndex < newIndex)
                                 {
                                     newIndex++;
                                 }
-                                
+
                                 if (oldIndex != newIndex)
                                 {
                                     _mods.RemoveAt(oldIndex);
@@ -1988,10 +1981,7 @@ namespace Stalker2ModManager.Views
             // Сбрасываем выделение, если оно есть
             if (!isCtrlPressed && ModsListBox.SelectedItem != null)
             {
-                var selectedItem = ModsListBox.SelectedItem;
                 ModsListBox.SelectedItem = null;
-                // Восстанавливаем выделение после небольшой задержки, если нужно
-                // Но обычно чекбокс работает через привязку данных, так что выделение не нужно
             }
         }
 
@@ -2026,8 +2016,8 @@ namespace Stalker2ModManager.Views
                 
                 foreach (var langCode in availableLanguages)
                 {
-                    var displayName = languageNames.ContainsKey(langCode) 
-                        ? $"{languageNames[langCode]} ({langCode.ToUpper()})" 
+                    var displayName = languageNames.TryGetValue(langCode, out string? value)
+                        ? $"{value} ({langCode.ToUpper()})" 
                         : langCode.ToUpper();
                     
                     var item = new System.Windows.Controls.ComboBoxItem
@@ -2178,17 +2168,14 @@ namespace Stalker2ModManager.Views
                 
                 // Install Mods button
                 InstallModsButton.Content = _localization.GetString("InstallMods");
-                
+
                 // Column headers
-                var orderHeader = FindName("OrderHeader") as System.Windows.Controls.TextBlock;
-                var nameHeader = FindName("NameHeader") as System.Windows.Controls.TextBlock;
-                var targetFolderHeader = FindName("TargetFolderHeader") as System.Windows.Controls.TextBlock;
-                
-                if (orderHeader != null)
+
+                if (FindName("OrderHeader") is System.Windows.Controls.TextBlock orderHeader)
                     orderHeader.Text = _localization.GetString("OrderHeader");
-                if (nameHeader != null)
+                if (FindName("NameHeader") is System.Windows.Controls.TextBlock nameHeader)
                     nameHeader.Text = _localization.GetString("NameHeader");
-                if (targetFolderHeader != null)
+                if (FindName("TargetFolderHeader") is System.Windows.Controls.TextBlock targetFolderHeader)
                     targetFolderHeader.Text = _localization.GetString("TargetFolderHeader");
                 
                 // Status
@@ -2428,79 +2415,22 @@ namespace Stalker2ModManager.Views
 }
 
 // Extension method for ListBox to get item at point
-public static class ListBoxExtensions
-{
-    public static object? GetItemAt(this System.Windows.Controls.ListBox listBox, System.Windows.Point point)
-    {
-        var element = listBox.InputHitTest(point) as System.Windows.DependencyObject;
-        while (element != null)
-        {
-            if (element is System.Windows.Controls.ListBoxItem item)
-            {
-                return item.Content;
-            }
-            element = System.Windows.Media.VisualTreeHelper.GetParent(element);
-        }
-        return null;
-    }
-}
+//public static class ListBoxExtensions
+//{
+//    public static object? GetItemAt(this System.Windows.Controls.ListBox listBox, System.Windows.Point point)
+//    {
+//        var element = listBox.InputHitTest(point) as System.Windows.DependencyObject;
+//        while (element != null)
+//        {
+//            if (element is System.Windows.Controls.ListBoxItem item)
+//            {
+//                return item.Content;
+//            }
+//            element = System.Windows.Media.VisualTreeHelper.GetParent(element);
+//        }
+//        return null;
+//    }
+//}
 
 // Adorner для отображения линии вставки при перетаскивании
-public class InsertionLineAdorner : Adorner
-{
-    private double _insertionY;
-    
-    public InsertionLineAdorner(UIElement adornedElement) 
-        : base(adornedElement)
-    {
-        IsHitTestVisible = false; // Adorner не должен перехватывать события мыши
-        _insertionY = 0;
-    }
-    
-    public void UpdatePosition(double y)
-    {
-        _insertionY = y;
-        InvalidateVisual();
-    }
-    
-    protected override Size MeasureOverride(Size constraint)
-    {
-        return AdornedElement.RenderSize;
-    }
-    
-    protected override Size ArrangeOverride(Size finalSize)
-    {
-        return finalSize;
-    }
-    
-    protected override void OnRender(DrawingContext drawingContext)
-    {
-        var listBox = AdornedElement as System.Windows.Controls.ListBox;
-        if (listBox == null) return;
-        
-        var width = listBox.ActualWidth;
-        
-        // Рисуем горизонтальную линию вставки
-        var lineY = Math.Max(0, Math.Min(_insertionY, listBox.ActualHeight));
-        
-        // Толстая синяя линия
-        var pen = new Pen(new SolidColorBrush(Color.FromArgb(255, 0, 122, 204)), 3);
-        drawingContext.DrawLine(pen, new Point(0, lineY), new Point(width, lineY));
-        
-        // Добавляем небольшой треугольник-индикатор слева
-        var triangleSize = 8.0;
-        var pathGeometry = new PathGeometry();
-        var figure = new PathFigure();
-        figure.StartPoint = new Point(0, lineY - triangleSize);
-        figure.Segments.Add(new LineSegment(new Point(triangleSize, lineY), true));
-        figure.Segments.Add(new LineSegment(new Point(0, lineY + triangleSize), true));
-        figure.IsClosed = true;
-        pathGeometry.Figures.Add(figure);
-        
-        drawingContext.DrawGeometry(
-            new SolidColorBrush(Color.FromArgb(255, 0, 122, 204)), 
-            null, 
-            pathGeometry);
-    }
-}
 

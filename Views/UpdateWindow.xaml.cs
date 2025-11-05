@@ -11,7 +11,7 @@ namespace Stalker2ModManager.Views
         private readonly UpdateInfo _updateInfo;
         private readonly string _currentVersion;
         private readonly string _downloadUrl;
-        private UpdateInstallerService _installerService;
+        private readonly UpdateInstallerService _installerService;
 
         public UpdateWindow(UpdateInfo updateInfo, string currentVersion, string downloadUrl)
         {
