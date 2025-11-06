@@ -8,6 +8,8 @@ namespace Stalker2ModManager.Models
         public double WindowHeight { get; set; } = 600;
         public string Language { get; set; } = "en";
         public string CustomLocalizationPath { get; set; } = string.Empty;
+        public string LastImportOrderPath { get; set; } = string.Empty;
+        public string LastExportOrderPath { get; set; } = string.Empty;
     }
 }
 

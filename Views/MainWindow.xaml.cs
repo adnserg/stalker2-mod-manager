@@ -1113,8 +1113,41 @@ namespace Stalker2ModManager.Views
                     Title = "Export Mods Order"
                 };
 
+                // Устанавливаем начальную директорию - последний использованный путь, mods_order.json или рабочая директория
+                var pathsConfig = _configService.LoadPathsConfig();
+                string? initialDir = null;
+                
+                if (!string.IsNullOrWhiteSpace(pathsConfig.LastExportOrderPath) && File.Exists(pathsConfig.LastExportOrderPath))
+                {
+                    initialDir = Path.GetDirectoryName(pathsConfig.LastExportOrderPath);
+                    dialog.FileName = Path.GetFileName(pathsConfig.LastExportOrderPath);
+                }
+                else
+                {
+                    var currentDir = Environment.CurrentDirectory;
+                    var modsOrderPath = Path.Combine(currentDir, "mods_order.json");
+                    if (File.Exists(modsOrderPath))
+                    {
+                        initialDir = currentDir;
+                        dialog.FileName = "mods_order.json";
+                    }
+                    else if (Directory.Exists(currentDir))
+                    {
+                        initialDir = currentDir;
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(initialDir))
+                {
+                    dialog.InitialDirectory = initialDir;
+                }
+
                 if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
+                    // Сохраняем путь к последнему экспортированному файлу
+                    pathsConfig.LastExportOrderPath = dialog.FileName;
+                    _configService.SavePathsConfig(pathsConfig);
+                    
                     var modsOrder = _configService.CreateModOrderFromMods([.. _mods]);
                     _configService.SaveModsOrderToFile(modsOrder, dialog.FileName);
                     UpdateStatus($"Mods order exported to {System.IO.Path.GetFileName(dialog.FileName)}");
@@ -1146,8 +1179,41 @@ namespace Stalker2ModManager.Views
                     Title = "Import Mods Order"
                 };
 
+                // Устанавливаем начальную директорию - последний использованный путь, mods_order.json или рабочая директория
+                var pathsConfig = _configService.LoadPathsConfig();
+                string? initialDir = null;
+                
+                if (!string.IsNullOrWhiteSpace(pathsConfig.LastImportOrderPath) && File.Exists(pathsConfig.LastImportOrderPath))
+                {
+                    initialDir = Path.GetDirectoryName(pathsConfig.LastImportOrderPath);
+                    dialog.FileName = Path.GetFileName(pathsConfig.LastImportOrderPath);
+                }
+                else
+                {
+                    var currentDir = Environment.CurrentDirectory;
+                    var modsOrderPath = Path.Combine(currentDir, "mods_order.json");
+                    if (File.Exists(modsOrderPath))
+                    {
+                        initialDir = currentDir;
+                        dialog.FileName = "mods_order.json";
+                    }
+                    else if (Directory.Exists(currentDir))
+                    {
+                        initialDir = currentDir;
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(initialDir))
+                {
+                    dialog.InitialDirectory = initialDir;
+                }
+
                 if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
+                    // Сохраняем путь к последнему импортированному файлу
+                    pathsConfig.LastImportOrderPath = dialog.FileName;
+                    _configService.SavePathsConfig(pathsConfig);
+                    
                     var modsOrder = _configService.LoadModsOrderFromFile(dialog.FileName);
                     
                     if (modsOrder.Mods.Count != 0)
@@ -1179,8 +1245,40 @@ namespace Stalker2ModManager.Views
                 dialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*";
                 dialog.Title = _localization.GetString("SelectJsonFile");
 
+                // Устанавливаем начальную директорию - последний использованный путь, Localization папка или рабочая директория
+                var pathsConfig = _configService.LoadPathsConfig();
+                string? initialDir = null;
+                
+                if (!string.IsNullOrWhiteSpace(pathsConfig.CustomLocalizationPath) && File.Exists(pathsConfig.CustomLocalizationPath))
+                {
+                    initialDir = Path.GetDirectoryName(pathsConfig.CustomLocalizationPath);
+                    dialog.FileName = Path.GetFileName(pathsConfig.CustomLocalizationPath);
+                }
+                else
+                {
+                    var currentDir = Environment.CurrentDirectory;
+                    var localizationDir = Path.Combine(currentDir, "Localization");
+                    if (Directory.Exists(localizationDir))
+                    {
+                        initialDir = localizationDir;
+                    }
+                    else if (Directory.Exists(currentDir))
+                    {
+                        initialDir = currentDir;
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(initialDir))
+                {
+                    dialog.InitialDirectory = initialDir;
+                }
+
                 if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
+                    // Сохраняем путь к последнему использованному файлу локализации
+                    pathsConfig.CustomLocalizationPath = dialog.FileName;
+                    _configService.SavePathsConfig(pathsConfig);
+                    
                     _localization.LoadFromExternalFile(dialog.FileName);
                     UpdateLocalization(); // Обновляем UI с новой локализацией
                     UpdateStatus($"Loaded custom localization from: {System.IO.Path.GetFileName(dialog.FileName)}");
