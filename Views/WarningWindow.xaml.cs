@@ -59,6 +59,14 @@ namespace Stalker2ModManager.Views
                 CancelButton.Content = localization.GetString("Cancel");
                 OkButton.Content = localization.GetString("OK");
             }
+            else if (buttons == MessageBoxButton.YesNoCancel)
+            {
+                // Порядок: Yes (OkButton), No (CancelButton), Cancel (ExtraButton)
+                OkButton.Content = localization.GetString("Yes");
+                CancelButton.Content = localization.GetString("No");
+                ExtraButton.Content = localization.GetString("Cancel");
+                ExtraButton.Visibility = Visibility.Visible;
+            }
         }
 
         private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -77,7 +85,16 @@ namespace Stalker2ModManager.Views
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            Result = MessageBoxResult.Cancel;
+            // Может быть No в некоторых режимах
+            var localization = LocalizationService.Instance;
+            if (CancelButton.Content.ToString() == localization.GetString("No"))
+            {
+                Result = MessageBoxResult.No;
+            }
+            else
+            {
+                Result = MessageBoxResult.Cancel;
+            }
             Close();
         }
 
@@ -93,6 +110,12 @@ namespace Stalker2ModManager.Views
             {
                 Result = MessageBoxResult.OK;
             }
+            Close();
+        }
+
+        private void ExtraButton_Click(object sender, RoutedEventArgs e)
+        {
+            Result = MessageBoxResult.Cancel;
             Close();
         }
 
