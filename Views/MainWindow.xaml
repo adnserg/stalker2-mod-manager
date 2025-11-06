@@ -645,11 +645,11 @@
                             </Grid.RowDefinitions>
 
                             <Label Grid.Row="0" Grid.Column="0" x:Name="VortexPathLabel" Content="Vortex Path:" VerticalAlignment="Center" Margin="0,5"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="VortexPathTextBox" VerticalContentAlignment="Center" IsReadOnly="True"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="VortexPathTextBox" VerticalContentAlignment="Center"/>
                             <Button Grid.Row="0" Grid.Column="2" x:Name="BrowseVortexButton" Content="Browse..." Click="BrowseVortexPath_Click" Margin="5,0,0,0" Padding="10,0"/>
 
                             <Label Grid.Row="1" Grid.Column="0" x:Name="TargetPathLabel" Content="Target Path:" VerticalAlignment="Center" Margin="0,5"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="TargetPathTextBox" VerticalContentAlignment="Center" IsReadOnly="True"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="TargetPathTextBox" VerticalContentAlignment="Center" TextChanged="TargetPathTextBox_TextChanged"/>
                             <Button Grid.Row="1" Grid.Column="2" x:Name="BrowseTargetButton" Content="Browse..." Click="BrowseTargetPath_Click" Margin="5,0,0,0" Padding="10,0"/>
                         </Grid>
                     </GroupBox>
@@ -726,10 +726,14 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="1" x:Name="OrderHeader" Text="Order" 
-                                          Foreground="#FF888888" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
-                                        <TextBlock Grid.Column="2" x:Name="NameHeader" Text="Mod Name" 
-                                          Foreground="#FF888888" FontSize="11" FontWeight="Bold" Margin="5,0,0,0"/>
+                                        <Button Grid.Column="1" x:Name="OrderHeaderButton" Content="Order" 
+                                          Foreground="#FF888888" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"
+                                          Background="Transparent" BorderThickness="0" Padding="5,2" Cursor="Hand"
+                                          Click="OrderHeaderButton_Click" ToolTip="Click to sort by Order"/>
+                                        <Button Grid.Column="2" x:Name="NameHeaderButton" Content="Mod Name" 
+                                          Foreground="#FF888888" FontSize="11" FontWeight="Bold" Margin="5,0,0,0"
+                                          Background="Transparent" BorderThickness="0" Padding="5,2" HorizontalAlignment="Left" Cursor="Hand"
+                                          Click="NameHeaderButton_Click" ToolTip="Click to sort by Name"/>
                                         <TextBlock Grid.Column="3" x:Name="TargetFolderHeader" Text="Target Folder" 
                                           Foreground="#FF888888" FontSize="11" FontWeight="Bold" Margin="5,0,0,0"/>
                                     </Grid>
@@ -798,25 +802,24 @@
                                 </StackPanel>
 
                                 <!-- Launch Stalker 2 Section -->
-                                <StackPanel Grid.Row="1" x:Name="LaunchGameSection" Visibility="Collapsed" Orientation="Vertical" VerticalAlignment="Bottom">
-                                    <Grid Width="120" Height="60" Margin="0,0,0,5" HorizontalAlignment="Center">
+                                <StackPanel Grid.Row="1" x:Name="LaunchGameSection" Visibility="Visible" Orientation="Vertical" VerticalAlignment="Bottom">
+                                    <Grid Width="120" Height="60" Margin="0,0,0,10" HorizontalAlignment="Center">
                                         <Image x:Name="Stalker2Image" Source="pack://application:,,,/images/stalker2.png"/>
                                         <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20,0,0">
-                                            <!-- Черная обводка -->
-                                            <TextBlock Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black">
-                                                <TextBlock.Effect>
-                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="1"/>
-                                                </TextBlock.Effect>
-                                            </TextBlock>
-                                            <TextBlock Margin="-2,0,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
-                                            <TextBlock Margin="2,0,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
-                                            <TextBlock Margin="0,-2,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
-                                            <TextBlock Margin="0,2,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
+                                            <!-- Черная обводка (смещенные слои) -->
+                                            <TextBlock Margin="-1,-1,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
+                                            <TextBlock Margin="1,-1,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
+                                            <TextBlock Margin="-1,1,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
+                                            <TextBlock Margin="1,1,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
+                                            <TextBlock Margin="-1,0,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
+                                            <TextBlock Margin="1,0,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
+                                            <TextBlock Margin="0,-1,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
+                                            <TextBlock Margin="0,1,0,0" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="Black"/>
                                             <!-- Основной белый текст -->
                                             <TextBlock x:Name="Stalker2Title" Text="S.T.A.L.K.E.R. 2 HoC" FontSize="12" FontWeight="DemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" Foreground="White"/>
                                         </Grid>
                                     </Grid>
-                                    <Button x:Name="LaunchStalker2Button" Content="Launch" Click="LaunchStalker2_Click"  Width="120" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                    <Button x:Name="LaunchStalker2Button" Content="Launch Stalker 2" Click="LaunchStalker2_Click"  Width="120"  FontWeight="Bold" HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </Grid>
                         </Grid>

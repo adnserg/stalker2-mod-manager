@@ -45,6 +45,10 @@ namespace Stalker2ModManager.Views
         // Для отмены установки модов
         private CancellationTokenSource? _installCancellationTokenSource;
         private bool _isInstalling = false;
+        
+        // Для сортировки таблицы (без изменения реального порядка)
+        private string _currentSortProperty = "Order";
+        private ListSortDirection _currentSortDirection = ListSortDirection.Ascending;
 
         public MainWindow()
         {
@@ -60,6 +64,9 @@ namespace Stalker2ModManager.Views
             };
             _modsViewSource.Filter += ModsViewSource_Filter;
             ModsListBox.ItemsSource = _modsViewSource.View;
+            
+            // Устанавливаем начальную сортировку по Order
+            ApplySorting();
 
             _logger.LogInfo("Application started");
             
@@ -361,6 +368,10 @@ namespace Stalker2ModManager.Views
                 
                 // Обновляем состояние кнопки Install Mods
                 UpdateInstallButtonState();
+                
+                // Применяем сортировку после загрузки модов
+                ApplySorting();
+                UpdateSortHeaderButtons();
                 
                 UpdateStatus($"Loaded {mods.Count} mods");
                 _logger.LogSuccess($"Loaded {mods.Count} mods from path: {VortexPathTextBox.Text}");
@@ -931,6 +942,83 @@ namespace Stalker2ModManager.Views
             _modsViewSource?.View?.Refresh();
         }
 
+        private void OrderHeaderButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentSortProperty == "Order")
+            {
+                // Переключаем направление сортировки
+                _currentSortDirection = _currentSortDirection == ListSortDirection.Ascending 
+                    ? ListSortDirection.Descending 
+                    : ListSortDirection.Ascending;
+            }
+            else
+            {
+                _currentSortProperty = "Order";
+                _currentSortDirection = ListSortDirection.Ascending;
+            }
+            
+            ApplySorting();
+            UpdateSortHeaderButtons();
+        }
+
+        private void NameHeaderButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentSortProperty == "Name")
+            {
+                // Переключаем направление сортировки
+                _currentSortDirection = _currentSortDirection == ListSortDirection.Ascending 
+                    ? ListSortDirection.Descending 
+                    : ListSortDirection.Ascending;
+            }
+            else
+            {
+                _currentSortProperty = "Name";
+                _currentSortDirection = ListSortDirection.Ascending;
+            }
+            
+            ApplySorting();
+            UpdateSortHeaderButtons();
+        }
+
+        private void ApplySorting()
+        {
+            if (_modsViewSource?.View == null)
+            {
+                return;
+            }
+
+            _modsViewSource.View.SortDescriptions.Clear();
+            
+            var sortDescription = new SortDescription(_currentSortProperty, _currentSortDirection);
+            _modsViewSource.View.SortDescriptions.Add(sortDescription);
+            
+            _modsViewSource.View.Refresh();
+        }
+
+        private void UpdateSortHeaderButtons()
+        {
+            if (OrderHeaderButton == null || NameHeaderButton == null)
+            {
+                return;
+            }
+
+            // Сбрасываем все заголовки
+            OrderHeaderButton.Content = "Order";
+            NameHeaderButton.Content = "Mod Name";
+            
+            // Добавляем индикатор направления сортировки к активному заголовку
+            string sortIndicator = _currentSortDirection == ListSortDirection.Ascending ? " ↑" : " ↓";
+            
+            if (_currentSortProperty == "Order")
+            {
+                OrderHeaderButton.Content = "Order" + sortIndicator;
+            }
+            else if (_currentSortProperty == "Name")
+            {
+                NameHeaderButton.Content = "Mod Name" + sortIndicator;
+            }
+        }
+
         private void MoveUp_Click(object sender, RoutedEventArgs e)
         {
             if (ModsListBox.SelectedItem is ModInfo selectedMod)
@@ -940,7 +1028,10 @@ namespace Stalker2ModManager.Views
                 {
                     _mods.Move(index, index - 1);
                     UpdateOrders();
-                    ModsListBox.SelectedIndex = index - 1;
+                    // Применяем сортировку после изменения порядка
+                    ApplySorting();
+                    // Находим новый индекс после сортировки
+                    ModsListBox.SelectedItem = selectedMod;
                     _logger.LogDebug($"Moved mod '{selectedMod.Name}' up (from {index} to {index - 1})");
                 }
             }
@@ -955,7 +1046,10 @@ namespace Stalker2ModManager.Views
                 {
                     _mods.Move(index, index + 1);
                     UpdateOrders();
-                    ModsListBox.SelectedIndex = index + 1;
+                    // Применяем сортировку после изменения порядка
+                    ApplySorting();
+                    // Находим новый индекс после сортировки
+                    ModsListBox.SelectedItem = selectedMod;
                     _logger.LogDebug($"Moved mod '{selectedMod.Name}' down (from {index} to {index + 1})");
                 }
             }
@@ -1037,6 +1131,10 @@ namespace Stalker2ModManager.Views
                     // Обновляем состояние кнопки Install Mods
                     UpdateInstallButtonState();
                     
+                    // Применяем сортировку после автоматической загрузки модов
+                    ApplySorting();
+                    UpdateSortHeaderButtons();
+                    
                     _logger.LogInfo($"Auto-loaded {mods.Count} mods from saved path: {pathsConfig.VortexPath}");
                 }
                 catch (Exception ex)
@@ -1093,6 +1191,10 @@ namespace Stalker2ModManager.Views
             
             // Обновляем состояние кнопки Install Mods
             UpdateInstallButtonState();
+            
+            // Применяем сортировку после применения порядка модов
+            ApplySorting();
+            UpdateSortHeaderButtons();
         }
 
         private void ExportOrder_Click(object sender, RoutedEventArgs e)
@@ -1797,6 +1899,10 @@ namespace Stalker2ModManager.Views
                 
                 // Обновляем состояние кнопки Install Mods
                 UpdateInstallButtonState();
+                
+                // Применяем сортировку после сортировки модов по JSON/TXT
+                ApplySorting();
+                UpdateSortHeaderButtons();
                 
                 UpdateStatus($"Sorted {_mods.Count} mods according to {fileName} ({fileType})");
                 _logger.LogSuccess($"Sorted {_mods.Count} mods according to {fileName} ({fileType}). Found {modOrderList.Count} mods in file");
