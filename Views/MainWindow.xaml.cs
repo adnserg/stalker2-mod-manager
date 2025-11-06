@@ -942,6 +942,25 @@ namespace Stalker2ModManager.Views
             _modsViewSource?.View?.Refresh();
         }
 
+        private void EnableHeaderButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentSortProperty == "IsEnabled")
+            {
+                // Переключаем направление сортировки
+                _currentSortDirection = _currentSortDirection == ListSortDirection.Ascending 
+                    ? ListSortDirection.Descending 
+                    : ListSortDirection.Ascending;
+            }
+            else
+            {
+                _currentSortProperty = "IsEnabled";
+                _currentSortDirection = ListSortDirection.Ascending;
+            }
+            
+            ApplySorting();
+            UpdateSortHeaderButtons();
+        }
+
         private void OrderHeaderButton_Click(object sender, RoutedEventArgs e)
         {
             if (_currentSortProperty == "Order")
@@ -997,19 +1016,24 @@ namespace Stalker2ModManager.Views
 
         private void UpdateSortHeaderButtons()
         {
-            if (OrderHeaderButton == null || NameHeaderButton == null)
+            if (EnableHeaderButton == null || OrderHeaderButton == null || NameHeaderButton == null)
             {
                 return;
             }
 
             // Сбрасываем все заголовки
+            EnableHeaderButton.Content = "✓";
             OrderHeaderButton.Content = "Order";
             NameHeaderButton.Content = "Mod Name";
             
             // Добавляем индикатор направления сортировки к активному заголовку
             string sortIndicator = _currentSortDirection == ListSortDirection.Ascending ? " ↑" : " ↓";
             
-            if (_currentSortProperty == "Order")
+            if (_currentSortProperty == "IsEnabled")
+            {
+                EnableHeaderButton.Content = "✓" + sortIndicator;
+            }
+            else if (_currentSortProperty == "Order")
             {
                 OrderHeaderButton.Content = "Order" + sortIndicator;
             }
