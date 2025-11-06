@@ -41,6 +41,7 @@ namespace Stalker2ModManager.Views
         private readonly List<ModInfo> _originalModsState = [];
         private bool _hasUnsavedChanges = false;
         private bool _isClosing = false;
+        private bool _isApplyingOrder = false;
         
         // Для отмены установки модов
         private CancellationTokenSource? _installCancellationTokenSource;
@@ -484,6 +485,11 @@ namespace Stalker2ModManager.Views
                 _hasUnsavedChanges = false;
                 UpdateSaveCancelButtons();
                 
+                // Обновляем представление и применяем сортировку
+                _modsViewSource?.View?.Refresh();
+                ApplySorting();
+                UpdateSortHeaderButtons();
+                
                 UpdateStatus("Changes cancelled");
                 _logger.LogInfo("Changes cancelled");
             }
@@ -532,7 +538,7 @@ namespace Stalker2ModManager.Views
         {
             mod.PropertyChanged += (s, e) =>
             {
-                if (_isClosing) return;
+                if (_isClosing || _isApplyingOrder) return;
                 
                 // Отслеживаем изменения Order и IsEnabled
                 if (e.PropertyName == nameof(ModInfo.Order) || e.PropertyName == nameof(ModInfo.IsEnabled))
@@ -1152,6 +1158,15 @@ namespace Stalker2ModManager.Views
 
                     UpdateOrders();
                     
+                    // Подписываемся на изменения всех модов
+                    foreach (var mod in _mods)
+                    {
+                        SubscribeToModChanges(mod);
+                    }
+                    
+                    // Сохраняем исходное состояние после загрузки модов
+                    SaveOriginalModsState();
+                    
                     // Обновляем состояние кнопки Install Mods
                     UpdateInstallButtonState();
                     
@@ -1183,34 +1198,48 @@ namespace Stalker2ModManager.Views
 
         private void ApplyModsOrder(ModOrder order)
         {
-            // Создаем словарь для быстрого поиска модов по имени
-            var modsByName = _mods.ToDictionary(m => m.Name, m => m);
-
-            // Применяем порядок и статус включения из конфига
-            foreach (var orderItem in order.Mods.OrderBy(m => m.Order))
+            // Временно отключаем отслеживание изменений при применении порядка
+            _isApplyingOrder = true;
+            
+            try
             {
-                if (modsByName.TryGetValue(orderItem.Name, out var mod))
-                {
-                    mod.Order = orderItem.Order;
-                    mod.IsEnabled = orderItem.IsEnabled;
-                }
-            }
+                // Создаем словарь для быстрого поиска модов по имени
+                var modsByName = _mods.ToDictionary(m => m.Name, m => m);
 
-            // Сортируем список по порядку
-            var sortedMods = _mods.OrderBy(m => m.Order).ToList();
+                // Применяем порядок и статус включения из конфига
+                foreach (var orderItem in order.Mods.OrderBy(m => m.Order))
+                {
+                    if (modsByName.TryGetValue(orderItem.Name, out var mod))
+                    {
+                        mod.Order = orderItem.Order;
+                        mod.IsEnabled = orderItem.IsEnabled;
+                    }
+                }
+
+                // Сортируем список по порядку
+                var sortedMods = _mods.OrderBy(m => m.Order).ToList();
                 _mods.Clear();
-            foreach (var mod in sortedMods)
+                foreach (var mod in sortedMods)
                 {
                     _mods.Add(mod);
                 }
 
-            // Обновляем порядки после сортировки
-            UpdateOrders();
-            
-            // Подписываемся на изменения всех модов
-            foreach (var mod in _mods)
+                // Обновляем порядки после сортировки
+                UpdateOrders();
+                
+                // Подписываемся на изменения всех модов
+                foreach (var mod in _mods)
+                {
+                    SubscribeToModChanges(mod);
+                }
+                
+                // Сохраняем исходное состояние после применения порядка
+                SaveOriginalModsState();
+            }
+            finally
             {
-                SubscribeToModChanges(mod);
+                // Включаем отслеживание изменений обратно
+                _isApplyingOrder = false;
             }
             
             // Обновляем состояние кнопки Install Mods
@@ -2468,6 +2497,9 @@ namespace Stalker2ModManager.Views
                         }
                     }
                     
+                    // Явно вызываем MarkAsChanged после изменения IsEnabled
+                    MarkAsChanged();
+                    
                     e.Handled = true;
                     return;
                 }
@@ -2479,6 +2511,10 @@ namespace Stalker2ModManager.Views
             {
                 ModsListBox.SelectedItem = null;
             }
+            
+            // Явно вызываем MarkAsChanged после изменения IsEnabled через CheckBox
+            // (для одного мода это должно работать автоматически через подписку, но на всякий случай вызываем явно)
+            MarkAsChanged();
         }
 
         // Window management handlers
