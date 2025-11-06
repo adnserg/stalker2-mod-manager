@@ -607,6 +607,52 @@ namespace Stalker2ModManager.Views
             }
         }
 
+        // Нормализует имя мода из order-файлов, удаляя суффиксы вида "-123-1-2-..." или "-v3-0-1-..."
+        private static string NormalizeOrderName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+
+            // Правило:
+            // - если встречаем первый '-' и далее идет цифра или v/V, то сохраняем ДО конца этого первого числового/верс. токена,
+            //   т.е. до следующего '-' (не включая его). Остальной хвост отбрасываем.
+            // Примеры:
+            //   "SimpleModLoader-304-0-4-9-1748465595" -> "SimpleModLoader-304"
+            //   "UE4SS-560-v3-0-1-..." -> "UE4SS-560"
+            //   "Achievements Enabler - Steam-1493-1-5-..." -> "Achievements Enabler - Steam-1493"
+
+            int firstHyphen = -1;
+            int tokenStart = -1;
+            for (int i = 0; i < name.Length - 1; i++)
+            {
+                if (name[i] != '-') continue;
+                int j = i + 1;
+                while (j < name.Length && char.IsWhiteSpace(name[j])) j++;
+                if (j >= name.Length) break;
+                char next = name[j];
+                if (char.IsDigit(next) || next == 'v' || next == 'V')
+                {
+                    firstHyphen = i;      // позиция '-'
+                    tokenStart = j;       // начало числового/верс. токена
+                    break;
+                }
+            }
+
+            if (firstHyphen >= 0 && tokenStart >= 0)
+            {
+                // Найти конец ПЕРВОГО токена (до следующего '-')
+                int tokenEnd = name.IndexOf('-', tokenStart);
+                if (tokenEnd == -1)
+                {
+                    // Нет следующего '-', оставляем всю строку как есть
+                    return name.Trim();
+                }
+                // Результат: всё до tokenEnd (не включая его)
+                return name.Substring(0, tokenEnd).TrimEnd();
+            }
+
+            return name.Trim();
+        }
+
         private void LoadConfig_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -1203,13 +1249,35 @@ namespace Stalker2ModManager.Views
             
             try
             {
-                // Создаем словарь для быстрого поиска модов по имени
-                var modsByName = _mods.ToDictionary(m => m.Name, m => m);
+                // Смотрим настройку: учитывать ли версии модов при сопоставлении
+                var cfg = _configService.LoadPathsConfig();
+                bool considerVersion = cfg.ConsiderModVersion;
+
+                // Создаем словари для быстрого поиска модов по имени
+                var modsByName = _mods.ToDictionary(m => m.Name, m => m, StringComparer.InvariantCultureIgnoreCase);
+                var modsByNameNormalized = considerVersion
+                    ? null
+                    : _mods.ToDictionary(m => NormalizeOrderName(m.Name), m => m, StringComparer.InvariantCultureIgnoreCase);
 
                 // Применяем порядок и статус включения из конфига
                 foreach (var orderItem in order.Mods.OrderBy(m => m.Order))
                 {
-                    if (modsByName.TryGetValue(orderItem.Name, out var mod))
+                    // Матч: либо по полному имени (если включено), либо по нормализованному
+                    ModInfo? mod = null;
+                    if (considerVersion)
+                    {
+                        modsByName.TryGetValue(orderItem.Name, out mod);
+                    }
+                    else
+                    {
+                        if (!modsByName.TryGetValue(orderItem.Name, out mod))
+                        {
+                            var normalized = NormalizeOrderName(orderItem.Name);
+                            modsByNameNormalized!.TryGetValue(normalized, out mod);
+                        }
+                    }
+
+                    if (mod != null)
                     {
                         mod.Order = orderItem.Order;
                         mod.IsEnabled = orderItem.IsEnabled;
@@ -1373,6 +1441,21 @@ namespace Stalker2ModManager.Views
                     
                     if (modsOrder.Mods.Count != 0)
                     {
+                        // Отключаем все моды, которых нет в импортированном order
+                        var cfg = _configService.LoadPathsConfig();
+                        bool considerVersion = cfg.ConsiderModVersion;
+                        var orderNames = new HashSet<string>(
+                            modsOrder.Mods.Select(m => considerVersion ? m.Name.Trim() : NormalizeOrderName(m.Name)),
+                            StringComparer.InvariantCultureIgnoreCase);
+                        foreach (var mod in _mods)
+                        {
+                            var key = considerVersion ? mod.Name.Trim() : NormalizeOrderName(mod.Name);
+                            if (!orderNames.Contains(key))
+                            {
+                                mod.IsEnabled = false;
+                            }
+                        }
+
                         ApplyModsOrder(modsOrder);
                         UpdateStatus($"Mods order imported from {System.IO.Path.GetFileName(dialog.FileName)}");
                         _logger.LogSuccess($"Mods order imported from {dialog.FileName}. Applied order for {modsOrder.Mods.Count} mods");

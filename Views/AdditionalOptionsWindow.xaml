@@ -82,6 +82,12 @@
                          IsChecked="False"
                          Checked="SortBySnapshotCheckBox_Checked"
                          Unchecked="SortBySnapshotCheckBox_Unchecked"/>
+                <CheckBox x:Name="ConsiderModVersionCheckBox"
+                         Content="Consider mod versions when matching order"
+                         Margin="0,0,0,10"
+                         IsChecked="False"
+                         Checked="ConsiderModVersionCheckBox_Checked"
+                         Unchecked="ConsiderModVersionCheckBox_Unchecked"/>
                 <StackPanel Margin="25,0,0,10" Orientation="Horizontal">
                     <TextBlock Text="File path:" 
                                Foreground="#FF888888"

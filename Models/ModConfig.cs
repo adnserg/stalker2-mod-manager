@@ -10,6 +10,7 @@ namespace Stalker2ModManager.Models
         public string CustomLocalizationPath { get; set; } = string.Empty;
         public string LastImportOrderPath { get; set; } = string.Empty;
         public string LastExportOrderPath { get; set; } = string.Empty;
+        public bool ConsiderModVersion { get; set; } = true;
     }
 }
 

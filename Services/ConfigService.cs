@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
@@ -15,6 +16,7 @@ namespace Stalker2ModManager.Services
         {
             if (!File.Exists(_pathsConfigPath))
             {
+                // Новый конфиг по умолчанию: учитывать версии включено
                 return new ModConfig();
             }
 

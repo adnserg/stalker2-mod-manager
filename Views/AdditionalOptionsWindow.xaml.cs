@@ -9,10 +9,20 @@ namespace Stalker2ModManager.Views
     {
         public bool SortBySnapshot { get; private set; }
         public string JsonFilePath { get; private set; } = string.Empty;
+        public bool ConsiderModVersion { get; private set; }
 
         public AdditionalOptionsWindow()
         {
             InitializeComponent();
+            // Initialize ConsiderModVersion from config
+            var configService = new ConfigService();
+            var cfg = configService.LoadPathsConfig();
+            ConsiderModVersion = cfg.ConsiderModVersion;
+            if (ConsiderModVersionCheckBox != null)
+            {
+                ConsiderModVersionCheckBox.IsChecked = ConsiderModVersion;
+                ConsiderModVersionCheckBox.Content = LocalizationService.Instance.GetString("ConsiderModVersion");
+            }
         }
 
         private void SortBySnapshotCheckBox_Checked(object sender, RoutedEventArgs e)
@@ -28,6 +38,24 @@ namespace Stalker2ModManager.Views
             BrowseJsonButton.IsEnabled = false;
             ApplyButton.IsEnabled = false;
             JsonFilePathTextBox.Text = string.Empty;
+        }
+
+        private void ConsiderModVersionCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            ConsiderModVersion = true;
+            var configService = new ConfigService();
+            var cfg = configService.LoadPathsConfig();
+            cfg.ConsiderModVersion = true;
+            configService.SavePathsConfig(cfg);
+        }
+
+        private void ConsiderModVersionCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            ConsiderModVersion = false;
+            var configService = new ConfigService();
+            var cfg = configService.LoadPathsConfig();
+            cfg.ConsiderModVersion = false;
+            configService.SavePathsConfig(cfg);
         }
 
         private void BrowseJsonFile_Click(object sender, RoutedEventArgs e)

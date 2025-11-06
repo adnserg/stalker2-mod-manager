@@ -107,7 +107,8 @@
     "DlcModLoaderRun": "Run",
     "DlcModLoaderAuthor": "Author: ",
     "DlcModLoaderGitHubTooltip": "GitHub Repository",
-    "DlcModLoaderNexusTooltip": "Nexus Mods"
+    "DlcModLoaderNexusTooltip": "Nexus Mods",
+    "ConsiderModVersion": "Consider mod versions when matching order"
   },
   "ru": {
     "WindowTitle": "Менеджер модов S.T.A.L.K.E.R. 2",
@@ -217,7 +218,8 @@
     "DlcModLoaderRun": "Запустить",
     "DlcModLoaderAuthor": "Автор: ",
     "DlcModLoaderGitHubTooltip": "Репозиторий GitHub",
-    "DlcModLoaderNexusTooltip": "Nexus Mods"
+    "DlcModLoaderNexusTooltip": "Nexus Mods",
+    "ConsiderModVersion": "Учитывать версии модов при сопоставлении порядка"
   },
   "fr": {
     "WindowTitle": "Gestionnaire de mods S.T.A.L.K.E.R. 2",
@@ -314,7 +316,8 @@
     "DlcModLoaderRun": "Exécuter",
     "DlcModLoaderAuthor": "Auteur: ",
     "DlcModLoaderGitHubTooltip": "Dépôt GitHub",
-    "DlcModLoaderNexusTooltip": "Nexus Mods"
+    "DlcModLoaderNexusTooltip": "Nexus Mods",
+    "ConsiderModVersion": "Consider mod versions when matching order"
   }
 }
 
