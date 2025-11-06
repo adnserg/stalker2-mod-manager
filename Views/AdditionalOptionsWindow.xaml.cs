@@ -23,6 +23,15 @@ namespace Stalker2ModManager.Views
                 ConsiderModVersionCheckBox.IsChecked = ConsiderModVersion;
                 ConsiderModVersionCheckBox.Content = LocalizationService.Instance.GetString("ConsiderModVersion");
             }
+
+            // Localize buttons
+            if (OkButton != null) OkButton.Content = LocalizationService.Instance.GetString("OK");
+            if (CancelButton != null) CancelButton.Content = LocalizationService.Instance.GetString("Cancel");
+            
+            // Localize static texts
+            SortBySnapshotCheckBox.Content = LocalizationService.Instance.GetString("SortByFile");
+            // The label and buttons for file path row
+            // We won't rename label here, but in main window localization keys exist
         }
 
         private void SortBySnapshotCheckBox_Checked(object sender, RoutedEventArgs e)
@@ -42,20 +51,30 @@ namespace Stalker2ModManager.Views
 
         private void ConsiderModVersionCheckBox_Checked(object sender, RoutedEventArgs e)
         {
-            ConsiderModVersion = true;
-            var configService = new ConfigService();
-            var cfg = configService.LoadPathsConfig();
-            cfg.ConsiderModVersion = true;
-            configService.SavePathsConfig(cfg);
+            ConsiderModVersion = true; // Сохраняем только по OK
         }
 
         private void ConsiderModVersionCheckBox_Unchecked(object sender, RoutedEventArgs e)
         {
-            ConsiderModVersion = false;
+            ConsiderModVersion = false; // Сохраняем только по OK
+        }
+
+        private void Ok_Click(object sender, RoutedEventArgs e)
+        {
+            // Применяем и сохраняем настройки
             var configService = new ConfigService();
             var cfg = configService.LoadPathsConfig();
-            cfg.ConsiderModVersion = false;
+            cfg.ConsiderModVersion = ConsiderModVersionCheckBox.IsChecked ?? cfg.ConsiderModVersion;
             configService.SavePathsConfig(cfg);
+
+            DialogResult = true;
+            Close();
+        }
+
+        private void Cancel_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
         }
 
         private void BrowseJsonFile_Click(object sender, RoutedEventArgs e)

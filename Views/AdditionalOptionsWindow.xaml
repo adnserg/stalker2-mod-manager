@@ -120,7 +120,8 @@
 
             <!-- Buttons -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Close" Click="Close_Click" Padding="15,8"/>
+                <Button x:Name="OkButton" Content="OK" Click="Ok_Click" Padding="15,8" Margin="0,0,8,0"/>
+                <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click" Padding="15,8"/>
             </StackPanel>
         </Grid>
     </Border>
