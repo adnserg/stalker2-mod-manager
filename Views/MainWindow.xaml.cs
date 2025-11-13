@@ -293,9 +293,13 @@ namespace Stalker2ModManager.Views
             // Проверяем наличие игрового exe файла
             var possibleExePaths = new[]
             {
+                // Windows/Steam version
                 Path.Combine(path, "Stalker2", "Binaries", "Win64", "Stalker2-Win64-Shipping.exe"),
                 Path.Combine(path, "Stalker2", "Binaries", "Win64", "Stalker2.exe"),
                 Path.Combine(path, "Stalker2", "Binaries", "Win64", "Stalker2Game.exe"),
+                // Xbox/Windows Store version
+                Path.Combine(path, "Stalker2", "Binaries", "WinGDK", "Stalker2-WinGDK-Shipping.exe"),
+                // Fallback paths
                 Path.Combine(path, "Stalker2-Win64-Shipping.exe"),
                 Path.Combine(path, "Stalker2.exe")
             };
@@ -1578,9 +1582,13 @@ namespace Stalker2ModManager.Views
                 // Find executable
                 var possibleExePaths = new[]
                 {
+                    // Windows/Steam version
                     Path.Combine(targetPath, "Stalker2", "Binaries", "Win64", "Stalker2-Win64-Shipping.exe"),
                     Path.Combine(targetPath, "Stalker2", "Binaries", "Win64", "Stalker2.exe"),
                     Path.Combine(targetPath, "Stalker2", "Binaries", "Win64", "Stalker2Game.exe"),
+                    // Xbox/Windows Store version
+                    Path.Combine(targetPath, "Stalker2", "Binaries", "WinGDK", "Stalker2-WinGDK-Shipping.exe"),
+                    // Fallback paths
                     Path.Combine(targetPath, "Stalker2-Win64-Shipping.exe"),
                     Path.Combine(targetPath, "Stalker2.exe")
                 };
