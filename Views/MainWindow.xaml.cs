@@ -957,7 +957,7 @@ namespace Stalker2ModManager.Views
 
         private void DlcModLoader_Click(object sender, RoutedEventArgs e)
         {
-            var window = new DlcModLoaderWindow
+            var window = new DlcModLoaderWindow(TargetPathTextBox.Text)
             {
                 Owner = this
             };

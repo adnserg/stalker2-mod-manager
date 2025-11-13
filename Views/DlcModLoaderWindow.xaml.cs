@@ -9,10 +9,12 @@ namespace Stalker2ModManager.Views
     public partial class DlcModLoaderWindow : Window
     {
         private readonly LocalizationService _localization;
+        private readonly string _targetPath;
 
-        public DlcModLoaderWindow()
+        public DlcModLoaderWindow(string targetPath)
         {
             InitializeComponent();
+            _targetPath = targetPath;
             _localization = LocalizationService.Instance;
             _localization.LanguageChanged += Localization_LanguageChanged;
             UpdateLocalization();
@@ -51,9 +53,9 @@ namespace Stalker2ModManager.Views
         {
             try
             {
-                var configService = new ConfigService();
                 var runner = new HerbatasDLCModLoaderRunner();
-                var result = runner.RunUsingConfig(configService);
+                // Используем путь напрямую из MainWindow, а не из конфига
+                var result = runner.Run(_targetPath);
 
                 if (result.Success)
                 {
