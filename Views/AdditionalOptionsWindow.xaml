@@ -1,7 +1,7 @@
 <Window x:Class="Stalker2ModManager.Views.AdditionalOptionsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Additional Options" Height="300" Width="500"
+        Title="Additional Options" Height="450" Width="500"
         Background="#FF1E1E1E" WindowStyle="None" AllowsTransparency="True"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
     <Window.Resources>
@@ -75,48 +75,87 @@
             </Grid>
 
             <!-- Options -->
-            <StackPanel Grid.Row="1" Margin="0,0,0,15">
-                <CheckBox x:Name="SortBySnapshotCheckBox" 
-                         Content="Sort mods according to JSON/TXT file"
-                         Margin="0,0,0,10"
-                         IsChecked="False"
-                         Checked="SortBySnapshotCheckBox_Checked"
-                         Unchecked="SortBySnapshotCheckBox_Unchecked"/>
-                <CheckBox x:Name="ConsiderModVersionCheckBox"
-                         Content="Consider mod versions when matching order"
-                         Margin="0,0,0,10"
-                         IsChecked="False"
-                         Checked="ConsiderModVersionCheckBox_Checked"
-                         Unchecked="ConsiderModVersionCheckBox_Unchecked"/>
-                <StackPanel Margin="25,0,0,10" Orientation="Horizontal">
-                    <TextBlock Text="File path:" 
-                               Foreground="#FF888888"
-                               FontSize="11"
-                               VerticalAlignment="Center"
-                               Margin="0,0,10,0"/>
-                    <TextBox x:Name="JsonFilePathTextBox" 
-                             IsEnabled="False"
-                             MinWidth="200"
-                             VerticalContentAlignment="Center"/>
-                    <Button Content="Browse..." 
-                            Click="BrowseJsonFile_Click"
-                            IsEnabled="False"
-                            x:Name="BrowseJsonButton"
-                            Margin="5,0,0,0"
-                            Padding="8,5"/>
-                    <Button Content="Apply" 
-                            Click="Apply_Click"
-                            IsEnabled="False"
-                            x:Name="ApplyButton"
-                            Margin="5,0,0,0"
-                            Padding="8,5"/>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,15">
+                <StackPanel>
+                    <!-- Mod Order Options -->
+                    <TextBlock Text="Mod Order" 
+                               FontSize="14" 
+                               FontWeight="Bold"
+                               Foreground="#FFFFFFFF"
+                               Margin="0,0,0,10"/>
+                    <CheckBox x:Name="SortBySnapshotCheckBox" 
+                             Content="Sort mods according to JSON/TXT file"
+                             Margin="0,0,0,10"
+                             IsChecked="False"
+                             Checked="SortBySnapshotCheckBox_Checked"
+                             Unchecked="SortBySnapshotCheckBox_Unchecked"/>
+                    <StackPanel Margin="25,0,0,10" Orientation="Horizontal">
+                        <TextBlock Text="File path:" 
+                                   Foreground="#FF888888"
+                                   FontSize="11"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBox x:Name="JsonFilePathTextBox" 
+                                 IsEnabled="False"
+                                 MinWidth="200"
+                                 VerticalContentAlignment="Center"/>
+                        <Button Content="Browse..." 
+                                Click="BrowseJsonFile_Click"
+                                IsEnabled="False"
+                                x:Name="BrowseJsonButton"
+                                Margin="5,0,0,0"
+                                Padding="8,5"/>
+                        <Button Content="Apply" 
+                                Click="Apply_Click"
+                                IsEnabled="False"
+                                x:Name="ApplyButton"
+                                Margin="5,0,0,0"
+                                Padding="8,5"/>
+                    </StackPanel>
+                    <TextBlock Text="Select a JSON or TXT file (any file with mod order) to sort mods based on its order."
+                           Foreground="#FF888888"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Margin="25,0,0,15"/>
+                    <CheckBox x:Name="ConsiderModVersionCheckBox"
+                             Content="Consider mod versions when matching order"
+                             Margin="0,0,0,15"
+                             IsChecked="False"
+                             Checked="ConsiderModVersionCheckBox_Checked"
+                             Unchecked="ConsiderModVersionCheckBox_Unchecked"/>
+                    
+                    <!-- Settings -->
+                    <TextBlock Text="Settings" 
+                               FontSize="14" 
+                               FontWeight="Bold"
+                               Foreground="#FFFFFFFF"
+                               Margin="0,10,0,10"/>
+                    <CheckBox x:Name="ValidateGamePathCheckBox"
+                             Content="Validate game path"
+                             Margin="0,0,0,15"
+                             IsChecked="True"
+                             Checked="ValidateGamePathCheckBox_Checked"
+                             Unchecked="ValidateGamePathCheckBox_Unchecked"/>
+                    
+                    <!-- Localization -->
+                    <TextBlock Text="Localization" 
+                               FontSize="14" 
+                               FontWeight="Bold"
+                               Foreground="#FFFFFFFF"
+                               Margin="0,10,0,10"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button x:Name="LoadCustomLocalizationButton" 
+                                Content="Load Custom Localization..." 
+                                Click="LoadCustomLocalization_Click"
+                                Padding="10,5"
+                                Margin="0,0,5,0"/>
+                        <Button x:Name="ResetLocalizationButton" 
+                                Content="Reset to Default Localization" 
+                                Click="ResetLocalization_Click"
+                                Padding="10,5"/>
+                    </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Select a JSON or TXT file (any file with mod order) to sort mods based on its order."
-                       Foreground="#FF888888"
-                       FontSize="11"
-                       TextWrapping="Wrap"
-                       Margin="25,0,0,15"/>
-            </StackPanel>
+            </ScrollViewer>
 
             <!-- Buttons -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">

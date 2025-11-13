@@ -239,7 +239,8 @@ namespace Stalker2ModManager.Views
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 var selectedPath = dialog.SelectedPath;
-                if (!ValidateGamePath(selectedPath))
+                var cfg = _configService.LoadPathsConfig();
+                if (cfg.ValidateGamePathEnabled && !ValidateGamePath(selectedPath))
                 {
                     WarningWindow.Show(
                         _localization.GetString("InvalidGamePath") ?? "Selected path is not a valid Stalker 2 game directory. Please select the game installation folder.",
@@ -271,7 +272,12 @@ namespace Stalker2ModManager.Views
             }
 
             // Проверяем, что путь валидный и моды загружены
-            bool isValidPath = !string.IsNullOrWhiteSpace(TargetPathTextBox.Text) && ValidateGamePath(TargetPathTextBox.Text);
+            var cfg = _configService.LoadPathsConfig();
+            bool isValidPath = !string.IsNullOrWhiteSpace(TargetPathTextBox.Text);
+            if (cfg.ValidateGamePathEnabled)
+            {
+                isValidPath = isValidPath && ValidateGamePath(TargetPathTextBox.Text);
+            }
             bool hasMods = _mods != null && _mods.Count > 0;
 
             InstallModsButton.IsEnabled = isValidPath && hasMods && !_isInstalling;
@@ -741,7 +747,8 @@ namespace Stalker2ModManager.Views
             }
 
             // Проверяем валидность пути игры перед установкой
-            if (!ValidateGamePath(TargetPathTextBox.Text))
+            var cfg = _configService.LoadPathsConfig();
+            if (cfg.ValidateGamePathEnabled && !ValidateGamePath(TargetPathTextBox.Text))
             {
                 WarningWindow.Show(
                     _localization.GetString("InvalidGamePath") ?? "Selected path is not a valid Stalker 2 game directory. Please select the game installation folder.",
@@ -1475,95 +1482,6 @@ namespace Stalker2ModManager.Views
             }
         }
 
-        private void LoadCustomLocalization_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                using var dialog = new System.Windows.Forms.OpenFileDialog();
-                dialog.Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*";
-                dialog.Title = _localization.GetString("SelectJsonFile");
-
-                // Устанавливаем начальную директорию - последний использованный путь, Localization папка или рабочая директория
-                var pathsConfig = _configService.LoadPathsConfig();
-                string? initialDir = null;
-                
-                if (!string.IsNullOrWhiteSpace(pathsConfig.CustomLocalizationPath) && File.Exists(pathsConfig.CustomLocalizationPath))
-                {
-                    initialDir = Path.GetDirectoryName(pathsConfig.CustomLocalizationPath);
-                    dialog.FileName = Path.GetFileName(pathsConfig.CustomLocalizationPath);
-                }
-                else
-                {
-                    var currentDir = Environment.CurrentDirectory;
-                    var localizationDir = Path.Combine(currentDir, "Localization");
-                    if (Directory.Exists(localizationDir))
-                    {
-                        initialDir = localizationDir;
-                    }
-                    else if (Directory.Exists(currentDir))
-                    {
-                        initialDir = currentDir;
-                    }
-                }
-                
-                if (!string.IsNullOrEmpty(initialDir))
-                {
-                    dialog.InitialDirectory = initialDir;
-                }
-
-                if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    // Сохраняем путь к последнему использованному файлу локализации
-                    pathsConfig.CustomLocalizationPath = dialog.FileName;
-                    _configService.SavePathsConfig(pathsConfig);
-                    
-                    _localization.LoadFromExternalFile(dialog.FileName);
-                    UpdateLocalization(); // Обновляем UI с новой локализацией
-                    UpdateStatus($"Loaded custom localization from: {System.IO.Path.GetFileName(dialog.FileName)}");
-                    _logger.LogSuccess($"Loaded custom localization from: {dialog.FileName}");
-                    WarningWindow.Show(
-                        _localization.GetString("ConfigSavedSuccess"),
-                        _localization.GetString("Success"),
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("Error loading custom localization", ex);
-                WarningWindow.Show(
-                    $"Error loading localization: {ex.Message}",
-                    _localization.GetString("Error"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
-        }
-
-        private void ResetLocalization_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                _localization.ResetToEmbedded();
-                UpdateLocalization(); // Обновляем UI с локализацией по умолчанию
-                UpdateStatus("Reset to default localization");
-                _logger.LogSuccess("Reset to default localization");
-                WarningWindow.Show(
-                    _localization.GetString("ConfigSavedSuccess"),
-                    _localization.GetString("Success"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("Error resetting localization", ex);
-                WarningWindow.Show(
-                    $"Error resetting localization: {ex.Message}",
-                    _localization.GetString("Error"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
-        }
-
         private void UpdateStatus(string message)
         {
             StatusTextBlock.Text = message;
@@ -1586,6 +1504,16 @@ namespace Stalker2ModManager.Views
                     _logger.LogInfo($"Sorting mods by {fileType} file: {optionsWindow.JsonFilePath}");
                     SortModsByJsonFile(optionsWindow.JsonFilePath);
                 }
+                
+                // Если изменилась локализация, обновляем UI
+                if (optionsWindow.LocalizationChanged)
+                {
+                    UpdateLocalization();
+                }
+                
+                // Обновляем состояние кнопки установки, так как настройка ValidateGamePath могла измениться
+                UpdateInstallButtonState();
+                CheckGameAvailability();
             }
         }
 
@@ -1605,7 +1533,8 @@ namespace Stalker2ModManager.Views
                 }
 
                 var targetPath = TargetPathTextBox.Text.Trim();
-                bool gameFound = ValidateGamePath(targetPath);
+                var cfg = _configService.LoadPathsConfig();
+                bool gameFound = !cfg.ValidateGamePathEnabled || ValidateGamePath(targetPath);
 
                 if (gameFound)
                 {
@@ -2768,9 +2697,6 @@ namespace Stalker2ModManager.Views
                 ExportOrderMenuItem.Header = "_" + _localization.GetString("ExportOrder");
                 ImportOrderMenuItem.Header = "_" + _localization.GetString("ImportOrder");
                 AdvancedMenuItem.Header = "_" + _localization.GetString("Advanced");
-                SettingsMenuItem.Header = "_" + _localization.GetString("Settings");
-                LoadCustomLocalizationMenuItem.Header = "_" + _localization.GetString("LoadCustomLocalization");
-                ResetLocalizationMenuItem.Header = "_" + _localization.GetString("ResetLocalization");
                 AboutMenuItem.Header = "_" + _localization.GetString("About");
                 InstallModsMenuItem.Header = _localization.GetString("InstallMods");
                 ClearModsMenuItem.Header = "_" + _localization.GetString("ClearMods");
