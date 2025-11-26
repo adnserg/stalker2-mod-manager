@@ -659,41 +659,28 @@ namespace Stalker2ModManager.Views
             if (string.IsNullOrWhiteSpace(name)) return string.Empty;
 
             // Правило:
-            // - если встречаем первый '-' и далее идет цифра или v/V, то сохраняем ДО конца этого первого числового/верс. токена,
-            //   т.е. до следующего '-' (не включая его). Остальной хвост отбрасываем.
+            // - если встречаем первый '-' и далее идет цифра, то сохраняем всё ДО этого '-' (не включая его).
+            //   Остальной хвост отбрасываем.
             // Примеры:
-            //   "SimpleModLoader-304-0-4-9-1748465595" -> "SimpleModLoader-304"
-            //   "UE4SS-560-v3-0-1-..." -> "UE4SS-560"
-            //   "Achievements Enabler - Steam-1493-1-5-..." -> "Achievements Enabler - Steam-1493"
+            //   "SimpleModLoader-304-0-4-9-1748465595" -> "SimpleModLoader"
+            //   "UE4SS-560-v3-0-1-..." -> "UE4SS"
+            //   "Achievements Enabler - Steam-1493-1-5-..." -> "Achievements Enabler - Steam"
+            //   "Loader v2.0.1 - Steam-664-2-0-1-1737163600" -> "Loader v2.0.1 - Steam"
 
-            int firstHyphen = -1;
-            int tokenStart = -1;
             for (int i = 0; i < name.Length - 1; i++)
             {
                 if (name[i] != '-') continue;
+                
+                // Пропускаем пробелы после '-'
                 int j = i + 1;
                 while (j < name.Length && char.IsWhiteSpace(name[j])) j++;
                 if (j >= name.Length) break;
-                char next = name[j];
-                if (char.IsDigit(next) || next == 'v' || next == 'V')
+                
+                // Если после '-' идет цифра, возвращаем всё до этого '-'
+                if (char.IsDigit(name[j]))
                 {
-                    firstHyphen = i;      // позиция '-'
-                    tokenStart = j;       // начало числового/верс. токена
-                    break;
+                    return name.Substring(0, i).TrimEnd();
                 }
-            }
-
-            if (firstHyphen >= 0 && tokenStart >= 0)
-            {
-                // Найти конец ПЕРВОГО токена (до следующего '-')
-                int tokenEnd = name.IndexOf('-', tokenStart);
-                if (tokenEnd == -1)
-                {
-                    // Нет следующего '-', оставляем всю строку как есть
-                    return name.Trim();
-                }
-                // Результат: всё до tokenEnd (не включая его)
-                return name.Substring(0, tokenEnd).TrimEnd();
             }
 
             return name.Trim();
