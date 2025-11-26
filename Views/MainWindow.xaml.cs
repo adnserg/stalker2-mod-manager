@@ -331,72 +331,103 @@ namespace Stalker2ModManager.Views
 
             try
             {
-                var mods = _modManagerService.LoadModsFromVortexPath(VortexPathTextBox.Text);
-                _mods.Clear();
-
-                // Загружаем сохраненный порядок модов
-                var savedOrder = _configService.LoadModsOrder();
-                var orderByName = savedOrder.Mods.ToDictionary(m => m.Name, m => m);
-
-                // Находим максимальный порядок из сохраненных модов
-                int maxOrder = savedOrder.Mods.Count != 0 ? savedOrder.Mods.Max(m => m.Order) : -1;
-
-                // Устанавливаем порядок из сохраненного конфига или добавляем в конец
-                foreach (var mod in mods)
-                {
-                    if (orderByName.TryGetValue(mod.Name, out var orderItem))
-                    {
-                        mod.Order = orderItem.Order;
-                        mod.IsEnabled = orderItem.IsEnabled;
-                        // Восстанавливаем состояния файлов
-                        if (orderItem.FileStates != null && orderItem.FileStates.Count > 0)
-                        {
-                            mod.FileStates = new Dictionary<string, bool>(orderItem.FileStates);
-                        }
-                    }
-                    else
-                    {
-                        // Если мод не найден в сохраненном порядке, добавляем в конец
-                        mod.Order = ++maxOrder;
-                        mod.IsEnabled = true;
-                    }
-                    _mods.Add(mod);
-                }
-
-                // Сортируем по порядку
-                var sortedMods = _mods.OrderBy(m => m.Order).ToList();
-                _mods.Clear();
-                foreach (var mod in sortedMods)
-                {
-                    _mods.Add(mod);
-                }
-
-                UpdateOrders();
-                
-                // Подписываемся на изменения всех модов
-                foreach (var mod in _mods)
-                {
-                    SubscribeToModChanges(mod);
-                }
-                
-                // Сохраняем исходное состояние после загрузки модов
-                SaveOriginalModsState();
-                
-                // Обновляем состояние кнопки Install Mods
-                UpdateInstallButtonState();
-                
-                // Применяем сортировку после загрузки модов
-                ApplySorting();
-                UpdateSortHeaderButtons();
-                
-                UpdateStatus($"Loaded {mods.Count} mods");
-                _logger.LogSuccess($"Loaded {mods.Count} mods from path: {VortexPathTextBox.Text}");
+                LoadModsFromPath(VortexPathTextBox.Text);
+                UpdateStatus(_localization.GetString("ModsLoaded", _mods.Count));
+                _logger.LogSuccess($"Loaded {_mods.Count} mods from path: {VortexPathTextBox.Text}");
             }
             catch (Exception ex)
             {
                 _logger.LogError("Error loading mods", ex);
                 WarningWindow.Show($"{_localization.GetString("ErrorLoadingMods")}: {ex.Message}", _localization.GetString("Error"), MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// Загружает моды из указанного пути и применяет сохраненный порядок и состояния файлов
+        /// </summary>
+        private void LoadModsFromPath(string vortexPath)
+        {
+            if (string.IsNullOrWhiteSpace(vortexPath))
+            {
+                return;
+            }
+
+            var mods = _modManagerService.LoadModsFromVortexPath(vortexPath);
+            _mods.Clear();
+
+            // Загружаем сохраненный порядок модов
+            var savedOrder = _configService.LoadModsOrder();
+            var orderByName = savedOrder.Mods.ToDictionary(m => m.Name, m => m);
+
+            // Находим максимальный порядок из сохраненных модов
+            int maxOrder = savedOrder.Mods.Count != 0 ? savedOrder.Mods.Max(m => m.Order) : -1;
+
+            // Устанавливаем порядок из сохраненного конфига или добавляем в конец
+            foreach (var mod in mods)
+            {
+                if (orderByName.TryGetValue(mod.Name, out var orderItem))
+                {
+                    mod.Order = orderItem.Order;
+                    mod.IsEnabled = orderItem.IsEnabled;
+                    // Восстанавливаем состояния файлов (всегда устанавливаем, даже если пустой)
+                    if (orderItem.FileStates != null && orderItem.FileStates.Count > 0)
+                    {
+                        mod.FileStates = new Dictionary<string, bool>(orderItem.FileStates);
+                        _logger.LogDebug($"Loaded FileStates for mod '{mod.Name}': {orderItem.FileStates.Count} files, HasDisabledFiles={mod.HasDisabledFiles}");
+                    }
+                    else
+                    {
+                        // Инициализируем пустым словарем, чтобы HasDisabledFiles правильно вычислялся
+                        mod.FileStates = new Dictionary<string, bool>();
+                    }
+                }
+                else
+                {
+                    // Если мод не найден в сохраненном порядке, добавляем в конец
+                    mod.Order = ++maxOrder;
+                    mod.IsEnabled = true;
+                    mod.FileStates = new Dictionary<string, bool>(); // Инициализируем пустым словарем
+                }
+                _mods.Add(mod);
+            }
+
+            // Сортируем по порядку
+            var sortedMods = _mods.OrderBy(m => m.Order).ToList();
+            _mods.Clear();
+            foreach (var mod in sortedMods)
+            {
+                _mods.Add(mod);
+                // Принудительно обновляем индикатор отключенных файлов после загрузки
+                if (mod.FileStates != null && mod.FileStates.Count > 0)
+                {
+                    // Вызываем обновление через изменение свойства, чтобы триггернуть PropertyChanged
+                    var temp = mod.FileStates;
+                    mod.FileStates = new Dictionary<string, bool>(temp);
+                }
+            }
+
+            // Обновляем представление списка, чтобы индикаторы обновились
+            _modsViewSource?.View?.Refresh();
+            
+            UpdateOrders();
+            
+            // Подписываемся на изменения всех модов
+            foreach (var mod in _mods)
+            {
+                SubscribeToModChanges(mod);
+            }
+            
+            // Сохраняем исходное состояние после загрузки модов
+            SaveOriginalModsState();
+            _hasUnsavedChanges = false;
+            UpdateSaveCancelButtons();
+            
+            // Обновляем состояние кнопки Install Mods
+            UpdateInstallButtonState();
+            
+            // Применяем сортировку после загрузки модов
+            ApplySorting();
+            UpdateSortHeaderButtons();
         }
 
         private void SaveConfig_Click(object sender, RoutedEventArgs e)
@@ -1183,60 +1214,8 @@ namespace Stalker2ModManager.Views
             {
                 try
                 {
-                    var mods = _modManagerService.LoadModsFromVortexPath(pathsConfig.VortexPath);
-                    _mods.Clear();
-
-                    // Загружаем сохраненный порядок модов
-                    var savedOrder = _configService.LoadModsOrder();
-                    var orderByName = savedOrder.Mods.ToDictionary(m => m.Name, m => m);
-
-                    // Находим максимальный порядок из сохраненных модов
-                    int maxOrder = savedOrder.Mods.Count != 0 ? savedOrder.Mods.Max(m => m.Order) : -1;
-
-                    // Устанавливаем порядок из сохраненного конфига или добавляем в конец
-                    foreach (var mod in mods)
-                    {
-                        if (orderByName.TryGetValue(mod.Name, out var orderItem))
-                        {
-                            mod.Order = orderItem.Order;
-                            mod.IsEnabled = orderItem.IsEnabled;
-                        }
-                        else
-                        {
-                            // Если мод не найден в сохраненном порядке, добавляем в конец
-                            mod.Order = ++maxOrder;
-                            mod.IsEnabled = true;
-                        }
-                        _mods.Add(mod);
-                    }
-
-                    // Сортируем по порядку
-                    var sortedMods = _mods.OrderBy(m => m.Order).ToList();
-                    _mods.Clear();
-                    foreach (var mod in sortedMods)
-                    {
-                        _mods.Add(mod);
-                    }
-
-                    UpdateOrders();
-                    
-                    // Подписываемся на изменения всех модов
-                    foreach (var mod in _mods)
-                    {
-                        SubscribeToModChanges(mod);
-                    }
-                    
-                    // Сохраняем исходное состояние после загрузки модов
-                    SaveOriginalModsState();
-                    
-                    // Обновляем состояние кнопки Install Mods
-                    UpdateInstallButtonState();
-                    
-                    // Применяем сортировку после автоматической загрузки модов
-                    ApplySorting();
-                    UpdateSortHeaderButtons();
-                    
-                    _logger.LogInfo($"Auto-loaded {mods.Count} mods from saved path: {pathsConfig.VortexPath}");
+                    LoadModsFromPath(pathsConfig.VortexPath);
+                    _logger.LogInfo($"Auto-loaded {_mods.Count} mods on startup from saved path: {pathsConfig.VortexPath}");
                 }
                 catch (Exception ex)
                 {
@@ -1301,6 +1280,11 @@ namespace Stalker2ModManager.Views
                         if (orderItem.FileStates != null && orderItem.FileStates.Count > 0)
                         {
                             mod.FileStates = new Dictionary<string, bool>(orderItem.FileStates);
+                            _logger.LogDebug($"Applied FileStates for mod '{mod.Name}': {orderItem.FileStates.Count} files, HasDisabledFiles={mod.HasDisabledFiles}");
+                        }
+                        else
+                        {
+                            mod.FileStates = new Dictionary<string, bool>(); // Инициализируем пустым словарем
                         }
                     }
                 }
@@ -1311,6 +1295,13 @@ namespace Stalker2ModManager.Views
                 foreach (var mod in sortedMods)
                 {
                     _mods.Add(mod);
+                    // Принудительно обновляем индикатор отключенных файлов после применения порядка
+                    if (mod.FileStates != null && mod.FileStates.Count > 0)
+                    {
+                        // Вызываем обновление через изменение свойства, чтобы триггернуть PropertyChanged
+                        var temp = mod.FileStates;
+                        mod.FileStates = new Dictionary<string, bool>(temp);
+                    }
                 }
 
                 // Обновляем порядки после сортировки
@@ -2593,6 +2584,10 @@ namespace Stalker2ModManager.Views
                     Owner = this
                 };
                 window.ShowDialog();
+                
+                // Индикатор обновляется автоматически через SetFileEnabled,
+                // который вызывает OnPropertyChanged(nameof(HasDisabledFiles))
+                // Дополнительное обновление не требуется
             }
             catch (Exception ex)
             {
@@ -2846,7 +2841,61 @@ namespace Stalker2ModManager.Views
                 _isClosing = true;
             }
             
+            // Автоматически сохраняем конфиг и порядок модов при закрытии
+            if (!e.Cancel)
+            {
+                SaveConfigOnClose();
+                SaveModsOrderOnClose();
+            }
+            
             base.OnClosing(e);
+        }
+        
+        private void SaveConfigOnClose()
+        {
+            try
+            {
+                var pathsConfig = _configService.LoadPathsConfig();
+                
+                // Обновляем пути, если они изменились
+                if (!string.IsNullOrEmpty(VortexPathTextBox.Text))
+                {
+                    pathsConfig.VortexPath = VortexPathTextBox.Text;
+                }
+                if (!string.IsNullOrEmpty(TargetPathTextBox.Text))
+                {
+                    pathsConfig.TargetPath = TargetPathTextBox.Text;
+                }
+                
+                // Сохраняем размер окна
+                pathsConfig.WindowWidth = Width;
+                pathsConfig.WindowHeight = Height;
+                
+                // Сохраняем язык
+                pathsConfig.Language = _localization.CurrentLanguage;
+                
+                _configService.SavePathsConfig(pathsConfig);
+                _logger.LogDebug("Paths config saved on close");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to save paths config on close: {ex.Message}", ex);
+            }
+        }
+        
+        private void SaveModsOrderOnClose()
+        {
+            try
+            {
+                // Сохраняем порядок модов (включая состояния файлов)
+                var modsOrder = _configService.CreateModOrderFromMods([.. _mods]);
+                _configService.SaveModsOrder(modsOrder);
+                _logger.LogDebug($"Mods order saved on close: {modsOrder.Mods.Count} mods");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to save mods order on close: {ex.Message}", ex);
+            }
         }
 
         protected override void OnClosed(EventArgs e)

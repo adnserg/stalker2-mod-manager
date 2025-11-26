@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 
 namespace Stalker2ModManager.Models
 {
@@ -64,6 +65,7 @@ namespace Stalker2ModManager.Models
             {
                 _fileStates = value ?? new Dictionary<string, bool>();
                 OnPropertyChanged(nameof(FileStates));
+                OnPropertyChanged(nameof(HasDisabledFiles));
             }
         }
 
@@ -121,6 +123,22 @@ namespace Stalker2ModManager.Models
         {
             _fileStates[relativePath] = isEnabled;
             OnPropertyChanged(nameof(FileStates));
+            OnPropertyChanged(nameof(HasDisabledFiles));
+        }
+
+        /// <summary>
+        /// Проверяет, есть ли у мода отключенные файлы.
+        /// </summary>
+        public bool HasDisabledFiles
+        {
+            get
+            {
+                if (_fileStates.Count == 0)
+                    return false;
+                
+                // Проверяем, есть ли хотя бы один отключенный файл
+                return _fileStates.Values.Any(enabled => !enabled);
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

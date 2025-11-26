@@ -8,6 +8,9 @@
         Background="#FF1E1E1E" WindowStyle="None" AllowsTransparency="True"
         ResizeMode="CanResize" MinWidth="800" MinHeight="700" WindowStartupLocation="CenterScreen">
     <Window.Resources>
+        <!-- Converters -->
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        
         <!-- Color Resources -->
         <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#FF5A5A5A"/>
 
@@ -757,6 +760,7 @@
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="30"/>
                                                         <ColumnDefinition Width="50"/>
+                                                        <ColumnDefinition Width="Auto"/>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
@@ -767,12 +771,21 @@
                                               FontWeight="Bold" 
                                               Foreground="#FF007ACC"
                                               HorizontalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Name}" 
+                                                    <!-- Индикатор отключенных файлов -->
+                                                    <TextBlock Grid.Column="2" 
+                                              Text="⚠" 
+                                              FontSize="14"
+                                              Foreground="#FFFFA500"
+                                              Margin="3,0,0,0"
+                                              VerticalAlignment="Center"
+                                              ToolTip="Some files are disabled"
+                                              Visibility="{Binding HasDisabledFiles, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Name}" 
                                               Foreground="#FFFFFFFF"
                                               FontSize="12"
                                               Margin="5,0,0,0"
                                               VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="3" Text="{Binding TargetFolderName}" 
+                                                    <TextBlock Grid.Column="4" Text="{Binding TargetFolderName}" 
                                               Foreground="#FF4CAF50" 
                                               Margin="5,0,0,0" 
                                               FontWeight="SemiBold"
