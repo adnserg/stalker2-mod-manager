@@ -31,7 +31,7 @@ namespace Stalker2ModManager.Views
         private void UpdateLocalization()
         {
             if (TitleTextBlock != null)
-                TitleTextBlock.Text = $"{_localization.GetString("ModFiles")}: {_mod.Name}";
+                TitleTextBlock.Text = $"{_localization.GetString("ModFiles")}: {_mod.DisplayName}";
             if (OkButton != null)
                 OkButton.Content = _localization.GetString("OK");
             if (SelectAllButton != null)

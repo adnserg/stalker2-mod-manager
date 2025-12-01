@@ -12,6 +12,10 @@ namespace Stalker2ModManager.Models
         private bool _isEnabled = true;
         private int _order;
         
+        // Отображаемое имя мода в UI (может отличаться от реального имени папки)
+        // Если не задано, в качестве DisplayName используется Name
+        private string _displayName = string.Empty;
+        
         // Словарь для хранения информации о включенных/отключенных файлах
         // Ключ - относительный путь файла от SourcePath, значение - включен ли файл
         private Dictionary<string, bool> _fileStates = new Dictionary<string, bool>();
@@ -34,6 +38,11 @@ namespace Stalker2ModManager.Models
                 _name = value;
                 OnPropertyChanged(nameof(Name));
                 OnPropertyChanged(nameof(TargetFolderName));
+                // Если DisplayName не задан явно, обновляем его вместе с Name
+                if (string.IsNullOrEmpty(_displayName))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                }
             }
         }
 
@@ -55,6 +64,20 @@ namespace Stalker2ModManager.Models
                 _order = value;
                 OnPropertyChanged(nameof(Order));
                 OnPropertyChanged(nameof(TargetFolderName));
+            }
+        }
+
+        /// <summary>
+        /// Имя мода, отображаемое в UI.
+        /// По умолчанию совпадает с Name, но может быть переопределено (например, чтобы показать базовое имя + версию).
+        /// </summary>
+        public string DisplayName
+        {
+            get => string.IsNullOrEmpty(_displayName) ? _name : _displayName;
+            set
+            {
+                _displayName = value ?? string.Empty;
+                OnPropertyChanged(nameof(DisplayName));
             }
         }
 

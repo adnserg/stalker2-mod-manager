@@ -172,6 +172,45 @@ namespace Stalker2ModManager.Views
             }
         }
 
+        /// <summary>
+        /// Обновляет отображаемые имена модов (DisplayName), чтобы пользователю было видно,
+        /// когда под одним базовым названием есть несколько версий (разные папки).
+        /// </summary>
+        private void UpdateModsDisplayNames()
+        {
+            if (_mods == null || _mods.Count == 0)
+            {
+                return;
+            }
+
+            // Группируем моды по базовому имени, очищенному от числовых суффиксов Nexus (NormalizeOrderName)
+            var groups = _mods
+                .GroupBy(m => NormalizeOrderName(m.Name), StringComparer.InvariantCultureIgnoreCase)
+                .ToList();
+
+            foreach (var group in groups)
+            {
+                var modsInGroup = group.ToList();
+
+                if (modsInGroup.Count == 1)
+                {
+                    // Для одиночного мода отображаем исходное имя папки
+                    modsInGroup[0].DisplayName = modsInGroup[0].Name;
+                }
+                else
+                {
+                    // Для нескольких версий одного и того же мода показываем:
+                    // "<Базовое имя> (<реальное имя папки>)"
+                    // Пример: "Quests (Quests - 1.0.0)", "Quests (Quests - 1.0.1)"
+                    string baseName = group.Key;
+                    foreach (var mod in modsInGroup)
+                    {
+                        mod.DisplayName = $"{baseName} ({mod.Name})";
+                    }
+                }
+            }
+        }
+
         private static System.Windows.Controls.ScrollViewer? GetScrollViewer(System.Windows.Controls.ListBox listBox)
         {
             if (listBox == null) return null;
@@ -390,6 +429,9 @@ namespace Stalker2ModManager.Views
                 }
                 _mods.Add(mod);
             }
+
+            // Обновляем отображаемые имена модов (с учетом базового имени и возможных дублей по версиям)
+            UpdateModsDisplayNames();
 
             // Сортируем по порядку
             var sortedMods = _mods.OrderBy(m => m.Order).ToList();
@@ -1235,11 +1277,26 @@ namespace Stalker2ModManager.Views
                 var cfg = _configService.LoadPathsConfig();
                 bool considerVersion = cfg.ConsiderModVersion;
 
-                // Создаем словари для быстрого поиска модов по имени
+                // Создаем словарь для быстрого поиска модов по имени
                 var modsByName = _mods.ToDictionary(m => m.Name, m => m, StringComparer.InvariantCultureIgnoreCase);
-                var modsByNameNormalized = considerVersion
-                    ? null
-                    : _mods.ToDictionary(m => NormalizeOrderName(m.Name), m => m, StringComparer.InvariantCultureIgnoreCase);
+                
+                // Для режима без учета версий готовим группировку по базовому имени (NormalizeOrderName),
+                // чтобы корректно обрабатывать несколько версий одного и того же мода
+                Dictionary<string, List<ModInfo>>? modsByBaseName = null;
+                if (!considerVersion)
+                {
+                    modsByBaseName = new Dictionary<string, List<ModInfo>>(StringComparer.InvariantCultureIgnoreCase);
+                    foreach (var mod in _mods)
+                    {
+                        var baseName = NormalizeOrderName(mod.Name);
+                        if (!modsByBaseName.TryGetValue(baseName, out var list))
+                        {
+                            list = new List<ModInfo>();
+                            modsByBaseName[baseName] = list;
+                        }
+                        list.Add(mod);
+                    }
+                }
 
                 // Применяем порядок и статус включения из конфига
                 foreach (var orderItem in order.Mods.OrderBy(m => m.Order))
@@ -1255,7 +1312,12 @@ namespace Stalker2ModManager.Views
                         if (!modsByName.TryGetValue(orderItem.Name, out mod))
                         {
                             var normalized = NormalizeOrderName(orderItem.Name);
-                            modsByNameNormalized!.TryGetValue(normalized, out mod);
+                            if (modsByBaseName != null && modsByBaseName.TryGetValue(normalized, out var list) && list.Count > 0)
+                            {
+                                // Пока что по умолчанию выбираем первую найденную версию.
+                                // В UI пользователь увидит конкретную версию в DisplayName.
+                                mod = list[0];
+                            }
                         }
                     }
 
@@ -1293,6 +1355,9 @@ namespace Stalker2ModManager.Views
 
                 // Обновляем порядки после сортировки
                 UpdateOrders();
+                
+                // Обновляем отображаемые имена модов (после применения порядка и возможных изменений)
+                UpdateModsDisplayNames();
                 
                 // Подписываемся на изменения всех модов
                 foreach (var mod in _mods)
