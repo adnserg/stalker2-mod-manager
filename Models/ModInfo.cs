@@ -16,6 +16,11 @@ namespace Stalker2ModManager.Models
         // Если не задано, в качестве DisplayName используется Name
         private string _displayName = string.Empty;
         
+        // Признак "основной" версии мода для отображения в списке.
+        // Если у базового имени несколько версий, в списке показывается только одна (IsPrimaryVersion = true),
+        // остальные остаются в коллекции, но скрываются фильтром.
+        private bool _isPrimaryVersion = true;
+        
         // Словарь для хранения информации о включенных/отключенных файлах
         // Ключ - относительный путь файла от SourcePath, значение - включен ли файл
         private Dictionary<string, bool> _fileStates = new Dictionary<string, bool>();
@@ -78,6 +83,20 @@ namespace Stalker2ModManager.Models
             {
                 _displayName = value ?? string.Empty;
                 OnPropertyChanged(nameof(DisplayName));
+            }
+        }
+
+        /// <summary>
+        /// Является ли эта запись "основной" версией мода, отображаемой в главном списке.
+        /// </summary>
+        public bool IsPrimaryVersion
+        {
+            get => _isPrimaryVersion;
+            set
+            {
+                if (_isPrimaryVersion == value) return;
+                _isPrimaryVersion = value;
+                OnPropertyChanged(nameof(IsPrimaryVersion));
             }
         }
 

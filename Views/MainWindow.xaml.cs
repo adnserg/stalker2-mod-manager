@@ -195,20 +195,50 @@ namespace Stalker2ModManager.Views
                 if (modsInGroup.Count == 1)
                 {
                     // Для одиночного мода отображаем исходное имя папки
-                    modsInGroup[0].DisplayName = modsInGroup[0].Name;
+                    var single = modsInGroup[0];
+                    single.DisplayName = single.Name;
+                    single.IsPrimaryVersion = true;
                 }
                 else
                 {
-                    // Для нескольких версий одного и того же мода показываем:
-                    // "<Базовое имя> (<реальное имя папки>)"
-                    // Пример: "Quests (Quests - 1.0.0)", "Quests (Quests - 1.0.1)"
                     string baseName = group.Key;
+
+                    // Сохраняем уже выбранную "основную" версию, если она есть в группе
+                    var existingPrimary = modsInGroup.FirstOrDefault(m => m.IsPrimaryVersion);
+
+                    ModInfo primary;
+                    if (existingPrimary != null)
+                    {
+                        primary = existingPrimary;
+                    }
+                    else
+                    {
+                        // Если первичная версия не помечена, выбираем мод с "максимальным" именем (часто это последняя версия)
+                        primary = modsInGroup
+                            .OrderBy(m => m.Name, StringComparer.InvariantCultureIgnoreCase)
+                            .Last();
+                    }
+
+                    // Для основной версии показываем только базовое имя,
+                    // чтобы в списке был один логический мод.
                     foreach (var mod in modsInGroup)
                     {
-                        mod.DisplayName = $"{baseName} ({mod.Name})";
+                        if (mod == primary)
+                        {
+                            mod.IsPrimaryVersion = true;
+                            mod.DisplayName = baseName;
+                        }
+                        else
+                        {
+                            mod.IsPrimaryVersion = false;
+                            // Для скрытых версий DisplayName сейчас не принципиален.
+                        }
                     }
                 }
             }
+
+            // Обновляем представление списка модов после изменения DisplayName / IsPrimaryVersion
+            _modsViewSource?.View?.Refresh();
         }
 
         private static System.Windows.Controls.ScrollViewer? GetScrollViewer(System.Windows.Controls.ListBox listBox)
@@ -1050,13 +1080,17 @@ namespace Stalker2ModManager.Views
                 
                 if (string.IsNullOrEmpty(searchText))
                 {
-                    e.Accepted = true;
+                    // Без поисковой строки отображаем только "основные" версии модов
+                    e.Accepted = mod.IsPrimaryVersion;
                 }
                 else
                 {
                     string searchLower = searchText.ToLowerInvariant();
-                    e.Accepted = mod.Name.Contains(searchLower, StringComparison.InvariantCultureIgnoreCase) ||
-                                 mod.TargetFolderName.Contains(searchLower, StringComparison.InvariantCultureIgnoreCase);
+                    // При поиске всё равно ограничиваемся только основными версиями,
+                    // чтобы пользователь не видел несколько строк одного и того же мода.
+                    e.Accepted = mod.IsPrimaryVersion &&
+                                 (mod.Name.Contains(searchLower, StringComparison.InvariantCultureIgnoreCase) ||
+                                  mod.TargetFolderName.Contains(searchLower, StringComparison.InvariantCultureIgnoreCase));
                 }
             }
             else
@@ -2631,7 +2665,13 @@ namespace Stalker2ModManager.Views
         {
             try
             {
-                var window = new ModFilesWindow(mod)
+                // Находим все версии этого мода с тем же базовым именем (NormalizeOrderName)
+                var baseName = NormalizeOrderName(mod.Name);
+                var versions = _mods
+                    .Where(m => string.Equals(NormalizeOrderName(m.Name), baseName, StringComparison.InvariantCultureIgnoreCase))
+                    .ToList();
+
+                var window = new ModFilesWindow(mod, versions)
                 {
                     Owner = this
                 };

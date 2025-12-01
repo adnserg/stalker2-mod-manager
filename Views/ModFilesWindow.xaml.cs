@@ -12,17 +12,33 @@ namespace Stalker2ModManager.Views
 {
     public partial class ModFilesWindow : Window
     {
-        private readonly ModInfo _mod;
+        private readonly ObservableCollection<ModInfo> _versions;
+        private ModInfo _selectedMod;
         private readonly ObservableCollection<ModFileItem> _files;
         private readonly LocalizationService _localization;
 
-        public ModFilesWindow(ModInfo mod)
+        public ModFilesWindow(ModInfo selectedMod, System.Collections.Generic.IEnumerable<ModInfo>? allVersions = null)
         {
             InitializeComponent();
-            _mod = mod;
+
             _localization = LocalizationService.Instance;
             _files = new ObservableCollection<ModFileItem>();
             FilesItemsControl.ItemsSource = _files;
+
+            // Если передан список версий, используем его; иначе считаем, что версия одна
+            if (allVersions != null)
+            {
+                _versions = new ObservableCollection<ModInfo>(allVersions);
+            }
+            else
+            {
+                _versions = new ObservableCollection<ModInfo> { selectedMod };
+            }
+
+            _selectedMod = selectedMod;
+
+            VersionsComboBox.ItemsSource = _versions;
+            VersionsComboBox.SelectedItem = _selectedMod;
 
             LoadFiles();
             UpdateLocalization();
@@ -31,7 +47,7 @@ namespace Stalker2ModManager.Views
         private void UpdateLocalization()
         {
             if (TitleTextBlock != null)
-                TitleTextBlock.Text = $"{_localization.GetString("ModFiles")}: {_mod.DisplayName}";
+                TitleTextBlock.Text = $"{_localization.GetString("ModFiles")}: {_selectedMod.DisplayName}";
             if (OkButton != null)
                 OkButton.Content = _localization.GetString("OK");
             if (SelectAllButton != null)
@@ -44,13 +60,13 @@ namespace Stalker2ModManager.Views
         {
             _files.Clear();
 
-            if (string.IsNullOrEmpty(_mod.SourcePath) || !Directory.Exists(_mod.SourcePath))
+            if (string.IsNullOrEmpty(_selectedMod.SourcePath) || !Directory.Exists(_selectedMod.SourcePath))
             {
                 return;
             }
 
             // Рекурсивно собираем все файлы из папки мода
-            CollectFiles(_mod.SourcePath, _mod.SourcePath);
+            CollectFiles(_selectedMod.SourcePath, _selectedMod.SourcePath);
         }
 
         private void CollectFiles(string currentPath, string basePath)
@@ -62,7 +78,7 @@ namespace Stalker2ModManager.Views
                 foreach (var file in files)
                 {
                     var relativePath = Path.GetRelativePath(basePath, file);
-                    var isEnabled = _mod.IsFileEnabled(relativePath);
+                    var isEnabled = _selectedMod.IsFileEnabled(relativePath);
                     _files.Add(new ModFileItem
                     {
                         Path = relativePath,
@@ -87,7 +103,7 @@ namespace Stalker2ModManager.Views
         {
             if (sender is CheckBox checkBox && checkBox.DataContext is ModFileItem fileItem)
             {
-                _mod.SetFileEnabled(fileItem.Path, true);
+                _selectedMod.SetFileEnabled(fileItem.Path, true);
                 fileItem.IsEnabled = true;
             }
         }
@@ -96,7 +112,7 @@ namespace Stalker2ModManager.Views
         {
             if (sender is CheckBox checkBox && checkBox.DataContext is ModFileItem fileItem)
             {
-                _mod.SetFileEnabled(fileItem.Path, false);
+                _selectedMod.SetFileEnabled(fileItem.Path, false);
                 fileItem.IsEnabled = false;
             }
         }
@@ -106,7 +122,7 @@ namespace Stalker2ModManager.Views
             foreach (var fileItem in _files)
             {
                 fileItem.IsEnabled = true;
-                _mod.SetFileEnabled(fileItem.Path, true);
+                _selectedMod.SetFileEnabled(fileItem.Path, true);
             }
         }
 
@@ -115,7 +131,19 @@ namespace Stalker2ModManager.Views
             foreach (var fileItem in _files)
             {
                 fileItem.IsEnabled = false;
-                _mod.SetFileEnabled(fileItem.Path, false);
+                _selectedMod.SetFileEnabled(fileItem.Path, false);
+            }
+        }
+
+        private void VersionsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (VersionsComboBox.SelectedItem is ModInfo newMod && newMod != _selectedMod)
+            {
+                // Переключаем выбранную версию
+                _selectedMod = newMod;
+                // Обновляем заголовок и список файлов для новой версии
+                UpdateLocalization();
+                LoadFiles();
             }
         }
 

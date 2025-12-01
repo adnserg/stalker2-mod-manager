@@ -7,6 +7,7 @@
     <Window.Resources>
         <!-- Hover color to match main window -->
         <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#FF5A5A5A"/>
+        
         <!-- Используем стили из MainWindow (выравниваем поведение) -->
         <Style TargetType="Button">
             <Setter Property="Background" Value="#FF2D2D30"/>
@@ -49,6 +50,92 @@
             <Setter Property="Foreground" Value="#FFFFFFFF"/>
             <Setter Property="FontSize" Value="12"/>
         </Style>
+
+        <!-- ComboBox Style (скопирован из MainWindow для一致ного вида) -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="#FF2D2D30"/>
+            <Setter Property="Foreground" Value="#FFFFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Name="ToggleButton"
+                                          Grid.Column="2"
+                                          Focusable="False"
+                                          ClickMode="Press"
+                                          IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="#FF2D2D30" 
+                                                BorderThickness="0"
+                                                CornerRadius="4"
+                                                Padding="4,0,8,0">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Path x:Name="Arrow" 
+                                                      Grid.Column="1"
+                                                      Fill="#FF888888" 
+                                                      HorizontalAlignment="Right" 
+                                                      VerticalAlignment="Center"
+                                                      Data="M 0 0 L 4 4 L 8 0 Z" 
+                                                      Margin="4,0,0,0"/>
+                                            </Grid>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter Name="ContentSite"
+                                              IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="8,0,23,0"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     Style="{x:Null}"
+                                     HorizontalAlignment="Left"
+                                     VerticalAlignment="Center"
+                                     Margin="8,0,23,0"
+                                     Focusable="True"
+                                     Background="Transparent"
+                                     Foreground="#FFFFFFFF"
+                                     BorderThickness="0"
+                                     Visibility="Hidden"
+                                     IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                            <Popup Name="Popup"
+                                   Placement="Bottom"
+                                   PlacementTarget="{Binding ElementName=ToggleButton}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}">
+                                <Border Name="DropDownBorder"
+                                        Background="#FF2D2D30"
+                                        BorderThickness="1"
+                                        CornerRadius="4">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#80000000" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                                    </Border.Effect>
+                                    <ScrollViewer Margin="0,2,0,2" 
+                                                  SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border BorderBrush="#FF007ACC" BorderThickness="2" CornerRadius="8">
@@ -59,19 +146,28 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Title -->
+            <!-- Title + version selector -->
             <Grid Grid.Row="0" Margin="0,0,0,15" MouseDown="TitleBar_MouseDown">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="TitleTextBlock" 
+                <StackPanel Orientation="Vertical" Grid.Column="0">
+                    <TextBlock x:Name="TitleTextBlock" 
                           Text="Mod Files" 
                           FontSize="16" 
                           FontWeight="Bold"
                           Foreground="#FFFFFFFF"
                           VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Content="✕" Width="30" Height="30" Click="Close_Click"
+                    <!-- Выбор версии мода, если их несколько -->
+                    <ComboBox x:Name="VersionsComboBox"
+                              Margin="0,6,0,0"
+                              Height="26"
+                              DisplayMemberPath="Name"
+                              SelectionChanged="VersionsComboBox_SelectionChanged"/>
+                </StackPanel>
+                <Button Grid.Column="2" Content="✕" Width="30" Height="30" Click="Close_Click"
                         Padding="0"/>
             </Grid>
 
