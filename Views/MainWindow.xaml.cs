@@ -205,19 +205,23 @@ namespace Stalker2ModManager.Views
 
                     if (modsInGroup.Count == 1)
                     {
-                        // Для одиночного мода отображаем исходное имя папки
+                        // Одиночный мод: отображаем исходное имя, чекбокс = IsEnabled, предупреждение, если мод выключен
                         var single = modsInGroup[0];
                         single.DisplayName = single.Name;
                         single.IsPrimaryVersion = true;
                         single.HasMultipleVersions = false;
                         single.InstalledVersionsCount = single.IsEnabled ? 1 : 0;
                         single.MultipleVersionsTooltip = string.Empty;
+                        single.GroupIsEnabled = single.IsEnabled;
+                        // Если мод выключен, показываем предупреждение; если включён — нет
+                        single.AggregatedHasDisabledFiles = !single.IsEnabled;
                     }
                     else
                     {
                         string baseName = group.Key;
                         // Считаем, сколько версий включены для установки
                         int enabledCount = modsInGroup.Count(m => m.IsEnabled);
+                        bool anyEnabled = enabledCount > 0;
 
                         // Сохраняем уже выбранную "основную" версию, если она есть в группе
                         var existingPrimary = modsInGroup.FirstOrDefault(m => m.IsPrimaryVersion);
@@ -235,9 +239,25 @@ namespace Stalker2ModManager.Views
                                 .Last();
                         }
 
-                        // Для основной версии показываем только базовое имя,
-                        // а также выбранную версию (имя папки) в скобках, чтобы было видно текущую версию.
-                        // Для остальных версий выставляем флаг HasMultipleVersions и помечаем их как неосновные.
+                        // Выбираем отображаемое имя в зависимости от количества включённых версий:
+                        // 0 включённых  -> просто базовое имя
+                        // 1 включённая  -> базовое имя + выбранная версия
+                        // >1 включённых -> базовое имя + пометка, что выбрано несколько версий
+                        string displayName;
+                        if (!anyEnabled)
+                        {
+                            displayName = baseName;
+                        }
+                        else if (enabledCount == 1)
+                        {
+                            var onlyEnabled = modsInGroup.First(m => m.IsEnabled);
+                            displayName = $"{baseName} ({onlyEnabled.Name})";
+                        }
+                        else
+                        {
+                            displayName = $"{baseName} - несколько версий";
+                        }
+
                         foreach (var mod in modsInGroup)
                         {
                             if (mod == primary)
@@ -245,8 +265,7 @@ namespace Stalker2ModManager.Views
                                 mod.IsPrimaryVersion = true;
                                 mod.HasMultipleVersions = modsInGroup.Count > 1;
                                 mod.InstalledVersionsCount = enabledCount;
-                                // Пример: "Quests (Quests - 1.0.1)" – базовое имя + выбранная версия
-                                mod.DisplayName = $"{baseName} ({primary.Name})";
+                                mod.DisplayName = displayName;
                                 mod.MultipleVersionsTooltip = _localization.GetString("MultipleVersionsAvailable") ?? "Multiple versions available";
                             }
                             else
@@ -259,19 +278,13 @@ namespace Stalker2ModManager.Views
                             }
                         }
 
-                        // Агрегируем состояние "включённости" для основной версии:
-                        // чекбокс в главном списке должен отражать факт, что включена хотя бы одна версия.
-                        // Это устраняет ситуацию, когда включена только вторая версия, а в главном списке чекбокс не проставлен.
-                        bool anyEnabled = enabledCount > 0;
-                        if (primary.IsEnabled != anyEnabled)
-                        {
-                            primary.IsEnabled = anyEnabled;
-                        }
+                        // Групповой чекбокс в главном списке: включён, если включена хотя бы одна версия.
+                        primary.GroupIsEnabled = anyEnabled;
 
-                        // Агрегируем индикатор отключённых файлов для основной версии:
-                        // предупреждающая иконка должна отображаться, если в ЛЮБОЙ версии мода есть отключённые файлы.
-                        bool anyDisabled = modsInGroup.Any(m => m.HasDisabledFiles);
-                        primary.AggregatedHasDisabledFiles = anyDisabled;
+                        // Предупреждение в главном списке:
+                        // если хотя бы одна версия включена — предупреждение НЕ показываем,
+                        // если все версии выключены — показываем.
+                        primary.AggregatedHasDisabledFiles = !anyEnabled;
                     }
                 }
 

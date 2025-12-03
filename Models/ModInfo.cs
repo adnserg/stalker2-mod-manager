@@ -37,8 +37,10 @@ namespace Stalker2ModManager.Models
         private Dictionary<string, bool> _fileStates = new Dictionary<string, bool>();
 
         // Агрегированный флаг отключённых файлов по группе версий (используется для главного списка).
-        // Для одиночной версии совпадает с HasDisabledFiles, для группы вычисляется по всем версиям.
         private bool _aggregatedHasDisabledFiles;
+
+        // Групповой флаг "мод включён" для отображения чекбокса в главном списке (по всем версиям).
+        private bool _groupIsEnabled;
 
         public string SourcePath
         {
@@ -163,6 +165,20 @@ namespace Stalker2ModManager.Models
         /// Флаг, что для данного мода включено более одной версии (будут установлены несколько версий).
         /// </summary>
         public bool HasMultipleInstalledVersions => _installedVersionsCount > 1;
+
+        /// <summary>
+        /// Групповое состояние "включённости" мода (по всем версиям) для чекбокса в главном списке.
+        /// </summary>
+        public bool GroupIsEnabled
+        {
+            get => _groupIsEnabled;
+            set
+            {
+                if (_groupIsEnabled == value) return;
+                _groupIsEnabled = value;
+                OnPropertyChanged(nameof(GroupIsEnabled));
+            }
+        }
 
         public Dictionary<string, bool> FileStates
         {

@@ -772,7 +772,7 @@
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <CheckBox Grid.Column="0" 
-                                            IsChecked="{Binding IsEnabled}" 
+                                            IsChecked="{Binding GroupIsEnabled}" 
                                             Click="CheckBox_Click"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding Order, StringFormat='[{0}]'}" 
                                               FontWeight="Bold" 
