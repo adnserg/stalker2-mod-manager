@@ -781,7 +781,7 @@
                                               HorizontalAlignment="Center"/>
                                                     <!-- Индикатор отключенных файлов (учитывает все версии мода) -->
                                                     <TextBlock Grid.Column="2" 
-                                              Text="⚠" 
+                                              Text="⚠"  
                                               FontSize="14"
                                               Foreground="#FFFFA500"
                                               Margin="3,0,0,0"
