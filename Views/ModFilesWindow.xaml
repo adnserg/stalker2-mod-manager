@@ -164,13 +164,30 @@
                         Padding="0"/>
             </Grid>
 
-            <!-- Version selector below title -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
-                <ComboBox x:Name="VersionsComboBox"
-                          Height="26"
-                          DisplayMemberPath="Name"
-                          SelectionChanged="VersionsComboBox_SelectionChanged" Width="666"/>
-            </StackPanel>
+            <!-- Version list with enable/disable checkboxes; click selects version for file view -->
+            <ListBox x:Name="VersionsListBox"
+                     Grid.Row="1"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     SelectionMode="Single"
+                     Margin="0,0,0,12"
+                     SelectionChanged="VersionsListBox_SelectionChanged">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <!-- 2) чекбокс слева: включает/выключает версию и все её файлы -->
+                            <CheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                      Click="VersionCheckBox_Click"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,6,0"/>
+                            <!-- 1) название версии мода; клик по строке выбирает версию -->
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="#FFFFFFFF"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
             <!-- Files List -->
             <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,15">

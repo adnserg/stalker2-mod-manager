@@ -42,6 +42,8 @@ namespace Stalker2ModManager.Views
         private bool _hasUnsavedChanges = false;
         private bool _isClosing = false;
         private bool _isApplyingOrder = false;
+        // Флаг для предотвращения рекурсивных вызовов при обновлении отображаемых имён и агрегированного состояния
+        private bool _isUpdatingDisplayNames = false;
         
         // Для отмены установки модов
         private CancellationTokenSource? _installCancellationTokenSource;
@@ -178,75 +180,108 @@ namespace Stalker2ModManager.Views
         /// </summary>
         private void UpdateModsDisplayNames()
         {
+            if (_isUpdatingDisplayNames)
+            {
+                return;
+            }
+
             if (_mods == null || _mods.Count == 0)
             {
                 return;
             }
+
+            _isUpdatingDisplayNames = true;
 
             // Группируем моды по базовому имени, очищенному от числовых суффиксов Nexus (NormalizeOrderName)
             var groups = _mods
                 .GroupBy(m => NormalizeOrderName(m.Name), StringComparer.InvariantCultureIgnoreCase)
                 .ToList();
 
-            foreach (var group in groups)
+            try
             {
-                var modsInGroup = group.ToList();
-
-                if (modsInGroup.Count == 1)
+                foreach (var group in groups)
                 {
-                    // Для одиночного мода отображаем исходное имя папки
-                    var single = modsInGroup[0];
-                    single.DisplayName = single.Name;
-                    single.IsPrimaryVersion = true;
-                    single.HasMultipleVersions = false;
-                    single.MultipleVersionsTooltip = string.Empty;
-                }
-                else
-                {
-                    string baseName = group.Key;
+                    var modsInGroup = group.ToList();
 
-                    // Сохраняем уже выбранную "основную" версию, если она есть в группе
-                    var existingPrimary = modsInGroup.FirstOrDefault(m => m.IsPrimaryVersion);
-
-                    ModInfo primary;
-                    if (existingPrimary != null)
+                    if (modsInGroup.Count == 1)
                     {
-                        primary = existingPrimary;
+                        // Для одиночного мода отображаем исходное имя папки
+                        var single = modsInGroup[0];
+                        single.DisplayName = single.Name;
+                        single.IsPrimaryVersion = true;
+                        single.HasMultipleVersions = false;
+                        single.InstalledVersionsCount = single.IsEnabled ? 1 : 0;
+                        single.MultipleVersionsTooltip = string.Empty;
                     }
                     else
                     {
-                        // Если первичная версия не помечена, выбираем мод с "максимальным" именем (часто это последняя версия)
-                        primary = modsInGroup
-                            .OrderBy(m => m.Name, StringComparer.InvariantCultureIgnoreCase)
-                            .Last();
-                    }
+                        string baseName = group.Key;
+                        // Считаем, сколько версий включены для установки
+                        int enabledCount = modsInGroup.Count(m => m.IsEnabled);
 
-                    // Для основной версии показываем только базовое имя,
-                    // а также выбранную версию (имя папки) в скобках, чтобы было видно текущую версию.
-                    // Для остальных версий выставляем флаг HasMultipleVersions и помечаем их как неосновные.
-                    foreach (var mod in modsInGroup)
-                    {
-                        if (mod == primary)
+                        // Сохраняем уже выбранную "основную" версию, если она есть в группе
+                        var existingPrimary = modsInGroup.FirstOrDefault(m => m.IsPrimaryVersion);
+
+                        ModInfo primary;
+                        if (existingPrimary != null)
                         {
-                            mod.IsPrimaryVersion = true;
-                            mod.HasMultipleVersions = modsInGroup.Count > 1;
-                            // Пример: "Quests (Quests - 1.0.1)" – базовое имя + выбранная версия
-                            mod.DisplayName = $"{baseName} ({primary.Name})";
-                            mod.MultipleVersionsTooltip = _localization.GetString("MultipleVersionsAvailable") ?? "Multiple versions available";
+                            primary = existingPrimary;
                         }
                         else
                         {
-                            mod.IsPrimaryVersion = false;
-                            mod.HasMultipleVersions = modsInGroup.Count > 1;
-                            mod.MultipleVersionsTooltip = _localization.GetString("MultipleVersionsAvailable") ?? "Multiple versions available";
-                            // Для скрытых версий DisplayName сейчас не принципиален.
+                            // Если первичная версия не помечена, выбираем мод с "максимальным" именем (часто это последняя версия)
+                            primary = modsInGroup
+                                .OrderBy(m => m.Name, StringComparer.InvariantCultureIgnoreCase)
+                                .Last();
                         }
+
+                        // Для основной версии показываем только базовое имя,
+                        // а также выбранную версию (имя папки) в скобках, чтобы было видно текущую версию.
+                        // Для остальных версий выставляем флаг HasMultipleVersions и помечаем их как неосновные.
+                        foreach (var mod in modsInGroup)
+                        {
+                            if (mod == primary)
+                            {
+                                mod.IsPrimaryVersion = true;
+                                mod.HasMultipleVersions = modsInGroup.Count > 1;
+                                mod.InstalledVersionsCount = enabledCount;
+                                // Пример: "Quests (Quests - 1.0.1)" – базовое имя + выбранная версия
+                                mod.DisplayName = $"{baseName} ({primary.Name})";
+                                mod.MultipleVersionsTooltip = _localization.GetString("MultipleVersionsAvailable") ?? "Multiple versions available";
+                            }
+                            else
+                            {
+                                mod.IsPrimaryVersion = false;
+                                mod.HasMultipleVersions = modsInGroup.Count > 1;
+                                mod.InstalledVersionsCount = enabledCount;
+                                mod.MultipleVersionsTooltip = _localization.GetString("MultipleVersionsAvailable") ?? "Multiple versions available";
+                                // Для скрытых версий DisplayName сейчас не принципиален.
+                            }
+                        }
+
+                        // Агрегируем состояние "включённости" для основной версии:
+                        // чекбокс в главном списке должен отражать факт, что включена хотя бы одна версия.
+                        // Это устраняет ситуацию, когда включена только вторая версия, а в главном списке чекбокс не проставлен.
+                        bool anyEnabled = enabledCount > 0;
+                        if (primary.IsEnabled != anyEnabled)
+                        {
+                            primary.IsEnabled = anyEnabled;
+                        }
+
+                        // Агрегируем индикатор отключённых файлов для основной версии:
+                        // предупреждающая иконка должна отображаться, если в ЛЮБОЙ версии мода есть отключённые файлы.
+                        bool anyDisabled = modsInGroup.Any(m => m.HasDisabledFiles);
+                        primary.AggregatedHasDisabledFiles = anyDisabled;
                     }
                 }
-            }
 
-            // Обновляем представление списка модов после изменения DisplayName / IsPrimaryVersion
-            _modsViewSource?.View?.Refresh();
+                // Обновляем представление списка модов после изменения DisplayName / IsPrimaryVersion
+                _modsViewSource?.View?.Refresh();
+            }
+            finally
+            {
+                _isUpdatingDisplayNames = false;
+            }
         }
 
         private static System.Windows.Controls.ScrollViewer? GetScrollViewer(System.Windows.Controls.ListBox listBox)
@@ -670,6 +705,19 @@ namespace Stalker2ModManager.Views
                 if (e.PropertyName == nameof(ModInfo.Order) || e.PropertyName == nameof(ModInfo.IsEnabled))
                 {
                     MarkAsChanged();
+
+                    // При изменении включения/отключения версий пересчитываем
+                    // отображаемые имена и индикаторы множественных установок
+                    if (e.PropertyName == nameof(ModInfo.IsEnabled))
+                    {
+                        UpdateModsDisplayNames();
+                    }
+                }
+
+                // При изменении набора отключённых файлов пересчитываем агрегированный индикатор
+                if (e.PropertyName == nameof(ModInfo.HasDisabledFiles))
+                {
+                    UpdateModsDisplayNames();
                 }
             };
         }
@@ -939,15 +987,15 @@ namespace Stalker2ModManager.Views
                     //UpdateStatus($"Installing: {p.CurrentMod} ({p.Installed}/{p.Total})");
                 });
 
-                // Устанавливаем только включенные "основные" версии модов,
-                // чтобы для модов с несколькими версиями использовалась выбранная версия.
+                // Устанавливаем все включенные версии модов.
+                // Пользователь может вручную включить одну или несколько версий одного и того же мода.
                 var modsToInstall = _mods
-                    .Where(m => m.IsEnabled && m.IsPrimaryVersion)
+                    .Where(m => m.IsEnabled)
                     .OrderBy(m => m.Order)
                     .ToList();
 
                 var enabledModsCount = modsToInstall.Count;
-                _logger.LogInfo($"Starting mods installation. Target: {TargetPathTextBox.Text}, Enabled primary mods: {enabledModsCount}");
+                _logger.LogInfo($"Starting mods installation. Target: {TargetPathTextBox.Text}, Enabled mods: {enabledModsCount}");
                 
                 await _modManagerService.InstallModsAsync(modsToInstall, TargetPathTextBox.Text, progress, _installCancellationTokenSource.Token);
 
@@ -1363,9 +1411,11 @@ namespace Stalker2ModManager.Views
                             var normalized = NormalizeOrderName(orderItem.Name);
                             if (modsByBaseName != null && modsByBaseName.TryGetValue(normalized, out var list) && list.Count > 0)
                             {
-                                // Пока что по умолчанию выбираем первую найденную версию.
-                                // В UI пользователь увидит конкретную версию в DisplayName.
-                                mod = list[0];
+                                // По умолчанию используем "последнюю" версию (по алфавиту имени папки),
+                                // чтобы при отключенном учёте версий автоматически брать самую новую.
+                                mod = list
+                                    .OrderBy(m => m.Name, StringComparer.InvariantCultureIgnoreCase)
+                                    .Last();
                             }
                         }
                     }

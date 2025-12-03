@@ -37,8 +37,8 @@ namespace Stalker2ModManager.Views
 
             _selectedMod = selectedMod;
 
-            VersionsComboBox.ItemsSource = _versions;
-            VersionsComboBox.SelectedItem = _selectedMod;
+            VersionsListBox.ItemsSource = _versions;
+            VersionsListBox.SelectedItem = _selectedMod;
 
             LoadFiles();
             UpdateLocalization();
@@ -105,6 +105,9 @@ namespace Stalker2ModManager.Views
             {
                 _selectedMod.SetFileEnabled(fileItem.Path, true);
                 fileItem.IsEnabled = true;
+
+                // Если включен хотя бы один файл, соответствующая версия мода должна быть включена
+                _selectedMod.IsEnabled = true;
             }
         }
 
@@ -114,6 +117,10 @@ namespace Stalker2ModManager.Views
             {
                 _selectedMod.SetFileEnabled(fileItem.Path, false);
                 fileItem.IsEnabled = false;
+
+                // 4) Если ни один файл не включен, версия мода автоматически выключается
+                bool anyEnabled = _files.Any(f => f.IsEnabled);
+                _selectedMod.IsEnabled = anyEnabled;
             }
         }
 
@@ -124,6 +131,8 @@ namespace Stalker2ModManager.Views
                 fileItem.IsEnabled = true;
                 _selectedMod.SetFileEnabled(fileItem.Path, true);
             }
+            // 5) При включении версии через "выбрать все" оставляем мод включенным
+            _selectedMod.IsEnabled = true;
         }
 
         private void DeselectAll_Click(object sender, RoutedEventArgs e)
@@ -133,25 +142,63 @@ namespace Stalker2ModManager.Views
                 fileItem.IsEnabled = false;
                 _selectedMod.SetFileEnabled(fileItem.Path, false);
             }
+            // 4) Если все файлы отключены через "снять выбор", выключаем версию мода
+            _selectedMod.IsEnabled = false;
         }
 
-        private void VersionsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        // 3) При клике по версии в списке показываем её файлы внизу
+        private void VersionsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (VersionsComboBox.SelectedItem is ModInfo newMod && newMod != _selectedMod)
+            if (VersionsListBox.SelectedItem is ModInfo newMod && newMod != _selectedMod)
             {
-                // Сбрасываем флаг "основной" версии у предыдущей и помечаем новую версию как основную,
-                // чтобы при установке использовалась именно она.
-                if (_selectedMod != null)
-                {
-                    _selectedMod.IsPrimaryVersion = false;
-                }
-
                 _selectedMod = newMod;
-                _selectedMod.IsPrimaryVersion = true;
-
                 // Обновляем заголовок и список файлов для новой версии
                 UpdateLocalization();
                 LoadFiles();
+            }
+        }
+
+        /// <summary>
+        /// Включает или выключает все файлы для указанной версии мода.
+        /// Используется при клике по чекбоксу версии.
+        /// </summary>
+        private void SetAllFilesEnabledForMod(ModInfo mod, bool isEnabled)
+        {
+            if (string.IsNullOrEmpty(mod.SourcePath) || !Directory.Exists(mod.SourcePath))
+            {
+                return;
+            }
+
+            try
+            {
+                var basePath = mod.SourcePath;
+                var files = Directory.GetFiles(basePath, "*", SearchOption.AllDirectories);
+                foreach (var file in files)
+                {
+                    var relativePath = Path.GetRelativePath(basePath, file);
+                    mod.SetFileEnabled(relativePath, isEnabled);
+                }
+            }
+            catch (Exception ex)
+            {
+                Services.Logger.Instance.LogError($"Error setting all files {(isEnabled ? "enabled" : "disabled")} for mod '{mod.Name}': {ex.Message}");
+            }
+        }
+
+        // 2) Чекбокс версии: при включении/выключении версии включаем/выключаем все её файлы
+        private void VersionCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox checkBox && checkBox.DataContext is ModInfo mod)
+            {
+                bool isChecked = checkBox.IsChecked == true;
+
+                SetAllFilesEnabledForMod(mod, isChecked);
+
+                // Если текущая выбранная версия — та же, обновляем список файлов
+                if (mod == _selectedMod)
+                {
+                    LoadFiles();
+                }
             }
         }
 

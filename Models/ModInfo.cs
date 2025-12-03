@@ -28,9 +28,17 @@ namespace Stalker2ModManager.Models
         // Локализованная подсказка для индикатора нескольких версий.
         private string _multipleVersionsTooltip = string.Empty;
         
+        // Количество версий мода с этим базовым именем, которые включены для установки.
+        // Используется для визуального предупреждения о множественной установке.
+        private int _installedVersionsCount = 1;
+        
         // Словарь для хранения информации о включенных/отключенных файлах
         // Ключ - относительный путь файла от SourcePath, значение - включен ли файл
         private Dictionary<string, bool> _fileStates = new Dictionary<string, bool>();
+
+        // Агрегированный флаг отключённых файлов по группе версий (используется для главного списка).
+        // Для одиночной версии совпадает с HasDisabledFiles, для группы вычисляется по всем версиям.
+        private bool _aggregatedHasDisabledFiles;
 
         public string SourcePath
         {
@@ -63,6 +71,7 @@ namespace Stalker2ModManager.Models
             get => _isEnabled;
             set
             {
+                if (_isEnabled == value) return; // предотвращаем лишние уведомления и возможные циклы
                 _isEnabled = value;
                 OnPropertyChanged(nameof(IsEnabled));
             }
@@ -135,6 +144,26 @@ namespace Stalker2ModManager.Models
             }
         }
 
+        /// <summary>
+        /// Количество версий этого мода (по базовому имени), которые включены для установки.
+        /// </summary>
+        public int InstalledVersionsCount
+        {
+            get => _installedVersionsCount;
+            set
+            {
+                if (_installedVersionsCount == value) return;
+                _installedVersionsCount = value < 1 ? 1 : value;
+                OnPropertyChanged(nameof(InstalledVersionsCount));
+                OnPropertyChanged(nameof(HasMultipleInstalledVersions));
+            }
+        }
+
+        /// <summary>
+        /// Флаг, что для данного мода включено более одной версии (будут установлены несколько версий).
+        /// </summary>
+        public bool HasMultipleInstalledVersions => _installedVersionsCount > 1;
+
         public Dictionary<string, bool> FileStates
         {
             get => _fileStates;
@@ -143,6 +172,7 @@ namespace Stalker2ModManager.Models
                 _fileStates = value ?? new Dictionary<string, bool>();
                 OnPropertyChanged(nameof(FileStates));
                 OnPropertyChanged(nameof(HasDisabledFiles));
+                OnPropertyChanged(nameof(AggregatedHasDisabledFiles));
             }
         }
 
@@ -201,6 +231,7 @@ namespace Stalker2ModManager.Models
             _fileStates[relativePath] = isEnabled;
             OnPropertyChanged(nameof(FileStates));
             OnPropertyChanged(nameof(HasDisabledFiles));
+            OnPropertyChanged(nameof(AggregatedHasDisabledFiles));
         }
 
         /// <summary>
@@ -215,6 +246,21 @@ namespace Stalker2ModManager.Models
                 
                 // Проверяем, есть ли хотя бы один отключенный файл
                 return _fileStates.Values.Any(enabled => !enabled);
+            }
+        }
+
+        /// <summary>
+        /// Агрегированный флаг отключённых файлов для отображения в главном списке.
+        /// Для одиночного мода равен HasDisabledFiles, для группы версий устанавливается из вне.
+        /// </summary>
+        public bool AggregatedHasDisabledFiles
+        {
+            get => _aggregatedHasDisabledFiles || HasDisabledFiles;
+            set
+            {
+                if (_aggregatedHasDisabledFiles == value) return;
+                _aggregatedHasDisabledFiles = value;
+                OnPropertyChanged(nameof(AggregatedHasDisabledFiles));
             }
         }
 
