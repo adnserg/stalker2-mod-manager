@@ -2850,15 +2850,17 @@ namespace Stalker2ModManager.Views
         {
             try
             {
-                var languageNames = _localization.GetLanguageNames(); // Key: display name, Value: lang code
-
+                var availableLanguages = _localization.GetAvailableLanguages();
+                var languageNames = _localization.GetLanguageNames();
+                
                 LanguageComboBox.Items.Clear();
-
-                foreach (var kvp in languageNames)
+                
+                foreach (var langCode in availableLanguages)
                 {
-                    var displayName = kvp.Key;
-                    var langCode = kvp.Value;
-
+                    var displayName = languageNames.TryGetValue(langCode, out string? value)
+                        ? $"{value} ({langCode.ToUpper()})" 
+                        : langCode.ToUpper();
+                    
                     var item = new System.Windows.Controls.ComboBoxItem
                     {
                         Content = displayName,
@@ -2916,11 +2918,8 @@ namespace Stalker2ModManager.Views
                     break;
                 }
             }
-
-            // Обновляем локализованный UI и подписи
+            
             UpdateLocalization();
-            // Пересчитываем отображаемые имена и локализованные подсказки модов/версий
-            UpdateModsDisplayNames();
         }
 
         private void LoadVersion()
