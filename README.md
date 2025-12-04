@@ -79,6 +79,18 @@ The application supports English and Russian languages. You can switch languages
 - .NET 9.0 Windows Runtime
 - Windows 10/11
 
+## Installation
+
+### Option 1: Use ready-to-run executable (recommended)
+
+If you don't want to build the project from source, you can download a ready-to-use `.exe` from the **Releases** page:
+
+- Download the latest version from [`Releases`](https://github.com/adnserg/stalker2-vortex-helper/releases).
+- Place the `.exe` file in any convenient folder (for example next to your `~mods` folder).
+- Run the `.exe` file.
+
+### Option 2: Build from source
+
 ## Building
 
 ```bash
