@@ -259,7 +259,7 @@ namespace Stalker2ModManager.Views
                         // Выбираем отображаемое имя в зависимости от количества включённых версий:
                         // 0 включённых  -> просто базовое имя
                         // 1 включённая  -> базовое имя + выбранная версия
-                        // >1 включённых -> базовое имя + локализованная пометка, что выбрано несколько версий
+                        // >1 включённых -> базовое имя + пометка, что выбрано несколько версий
                         string displayName;
                         if (!anyEnabled)
                         {
@@ -272,8 +272,7 @@ namespace Stalker2ModManager.Views
                         }
                         else
                         {
-                            var multipleSelectedLabel = _localization.GetString("MultipleVersionsSelected") ?? "multiple versions";
-                            displayName = $"{baseName} - {multipleSelectedLabel}";
+                            displayName = $"{baseName} - несколько версий";
                         }
 
                         foreach (var mod in modsInGroup)
