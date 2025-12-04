@@ -121,7 +121,8 @@
     "DeselectAll": "Deselect All",
     "OpenModFiles": "Open Mod Files",
     "SomeFilesDisabled": "Some files are disabled",
-    "MultipleVersionsAvailable": "Multiple versions available"
+    "MultipleVersionsAvailable": "Multiple versions available",
+    "NoFilesFound": "No files found in this mod folder"
   },
   "ru": {
     "WindowTitle": "Менеджер модов S.T.A.L.K.E.R. 2",
@@ -245,7 +246,8 @@
     "DeselectAll": "Снять выбор",
     "OpenModFiles": "Открыть файлы мода",
     "SomeFilesDisabled": "Некоторые файлы отключены",
-    "MultipleVersionsAvailable": "Доступно несколько версий"
+    "MultipleVersionsAvailable": "Доступно несколько версий",
+    "NoFilesFound": "В папке мода нет файлов"
   },
   "fr": {
     "WindowTitle": "Gestionnaire de mods S.T.A.L.K.E.R. 2",

@@ -212,12 +212,25 @@ namespace Stalker2ModManager.Views
                         single.HasMultipleVersions = false;
                         single.InstalledVersionsCount = single.IsEnabled ? 1 : 0;
                         single.MultipleVersionsTooltip = string.Empty;
-                        single.GroupIsEnabled = single.IsEnabled;
-                        single.DisabledFilesTooltip = _localization.GetString("SomeFilesDisabled") ?? "Some files are disabled";
 
-                        // Предупреждение: если мод включён и при этом есть отключённые файлы
-                        bool singleHasDisabledFiles = single.IsEnabled && single.HasDisabledFiles;
-                        single.AggregatedHasDisabledFiles = singleHasDisabledFiles;
+                        // Групповой чекбокс включён только если мод можно установить (есть файлы и есть хотя бы один включенный файл)
+                        bool canInstall = single.HasAnyFiles && single.HasAnyEnabledFiles;
+                        single.GroupIsEnabled = single.IsEnabled && canInstall;
+
+                        // Подсказка и предупреждение:
+                        // - если файлов нет, показываем текст "нет файлов" и всегда показываем индикатор
+                        // - если файлы есть и мод включён, но есть отключённые файлы, показываем предупреждение
+                        if (!single.HasAnyFiles)
+                        {
+                            single.DisabledFilesTooltip = _localization.GetString("NoFilesFound") ?? "No files found in this mod folder";
+                            single.AggregatedHasDisabledFiles = true;
+                        }
+                        else
+                        {
+                            single.DisabledFilesTooltip = _localization.GetString("SomeFilesDisabled") ?? "Some files are disabled";
+                            bool singleHasDisabledFiles = single.IsEnabled && single.HasDisabledFiles;
+                            single.AggregatedHasDisabledFiles = singleHasDisabledFiles;
+                        }
                     }
                     else
                     {
@@ -284,13 +297,25 @@ namespace Stalker2ModManager.Views
                             }
                         }
 
-                        // Групповой чекбокс в главном списке: включён, если включена хотя бы одна версия.
-                        primary.GroupIsEnabled = anyEnabled;
+                        // Групповой чекбокс в главном списке: включён, если включена хотя бы одна версия и у неё есть включённые файлы.
+                        bool anyInstallableVersion = modsInGroup.Any(m => m.HasAnyFiles && m.HasAnyEnabledFiles && m.IsEnabled);
+                        primary.GroupIsEnabled = anyInstallableVersion;
 
                         // Предупреждение в главном списке:
-                        // появляется только если среди ВКЛЮЧЁННЫХ версий есть отключённые файлы.
-                        bool anyDisabledInEnabledMods = enabledMods.Any(m => m.HasDisabledFiles);
-                        primary.AggregatedHasDisabledFiles = anyDisabledInEnabledMods;
+                        // - если ни в одной версии нет файлов, показываем "нет файлов"
+                        // - иначе, если среди включённых версий есть отключённые файлы, показываем стандартное предупреждение
+                        bool groupHasFiles = modsInGroup.Any(m => m.HasAnyFiles);
+                        if (!groupHasFiles)
+                        {
+                            primary.DisabledFilesTooltip = _localization.GetString("NoFilesFound") ?? "No files found in this mod folder";
+                            primary.AggregatedHasDisabledFiles = true;
+                        }
+                        else
+                        {
+                            primary.DisabledFilesTooltip = _localization.GetString("SomeFilesDisabled") ?? "Some files are disabled";
+                            bool anyDisabledInEnabledMods = enabledMods.Any(m => m.HasDisabledFiles);
+                            primary.AggregatedHasDisabledFiles = anyDisabledInEnabledMods;
+                        }
                     }
                 }
 

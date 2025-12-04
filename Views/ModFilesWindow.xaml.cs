@@ -62,11 +62,15 @@ namespace Stalker2ModManager.Views
 
             if (string.IsNullOrEmpty(_selectedMod.SourcePath) || !Directory.Exists(_selectedMod.SourcePath))
             {
+                _selectedMod.HasAnyFiles = false;
                 return;
             }
 
             // Рекурсивно собираем все файлы из папки мода
             CollectFiles(_selectedMod.SourcePath, _selectedMod.SourcePath);
+
+            // Обновляем флаг наличия файлов для версии мода
+            _selectedMod.HasAnyFiles = _files.Count > 0;
         }
 
         private void CollectFiles(string currentPath, string basePath)

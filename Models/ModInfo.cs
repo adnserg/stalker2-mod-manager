@@ -45,6 +45,9 @@ namespace Stalker2ModManager.Models
         // Локализованный текст подсказки для индикатора отключённых файлов.
         private string _disabledFilesTooltip = string.Empty;
 
+        // Есть ли вообще файлы в папке мода (используется для индикации пустых модов и блокировки установки).
+        private bool _hasAnyFiles = true;
+
         public string SourcePath
         {
             get => _sourcePath;
@@ -76,6 +79,12 @@ namespace Stalker2ModManager.Models
             get => _isEnabled;
             set
             {
+                // Запрещаем включать мод, если у него нет файлов или если для него не осталось ни одного включенного файла.
+                if (value && (!HasAnyFiles || !HasAnyEnabledFiles))
+                {
+                    return;
+                }
+
                 if (_isEnabled == value) return; // предотвращаем лишние уведомления и возможные циклы
                 _isEnabled = value;
                 OnPropertyChanged(nameof(IsEnabled));
@@ -180,6 +189,42 @@ namespace Stalker2ModManager.Models
                 if (_disabledFilesTooltip == value) return;
                 _disabledFilesTooltip = value ?? string.Empty;
                 OnPropertyChanged(nameof(DisabledFilesTooltip));
+            }
+        }
+
+        /// <summary>
+        /// Есть ли вообще файлы в папке мода.
+        /// </summary>
+        public bool HasAnyFiles
+        {
+            get => _hasAnyFiles;
+            set
+            {
+                if (_hasAnyFiles == value) return;
+                _hasAnyFiles = value;
+                OnPropertyChanged(nameof(HasAnyFiles));
+            }
+        }
+
+        /// <summary>
+        /// Есть ли хотя бы один файл, который будет установлен (не отключён пользователем).
+        /// </summary>
+        public bool HasAnyEnabledFiles
+        {
+            get
+            {
+                if (!HasAnyFiles)
+                {
+                    return false;
+                }
+
+                if (_fileStates == null || _fileStates.Count == 0)
+                {
+                    // Если нет явных состояний файлов, считаем, что все существующие файлы включены.
+                    return true;
+                }
+
+                return _fileStates.Values.Any(v => v);
             }
         }
 
